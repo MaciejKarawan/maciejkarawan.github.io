@@ -124,8 +124,8 @@
     </ul>
   </section>
 
-  <section aria-labelledby="research">
-    <h2 id="research">Research projects</h2>
+  <section aria-labelledby="projects">
+    <h2 id="projects">Projects</h2>
 
     <article class="project">
       <div>
@@ -138,6 +138,27 @@
       <div class="aside">
         <img src="assets/thesis.png" alt="Ratio of CFTP work to SSD absorption time across chain sizes and temperatures, flat near 2.85" loading="lazy" width="720" height="445">
         <p class="cap">Cost of CFTP relative to the new algorithm, across N and β.</p>
+      </div>
+    </article>
+
+    <article class="project">
+      <div>
+        <h3>BONASUS: a research process for systematic strategies</h3>
+        <p>An ongoing team project. The product is a reproducible research process rather than a single strategy: a hypothesis has to pass the same pipeline before it counts, and negative results are archived as results.</p>
+        <ul>
+          <li><strong>From search to falsification.</strong> The predecessor project searched thousands of strategy configurations. The best of about 4,000 null signals has a t-statistic near 4, so noise looks like a discovery. The project was reset around a cheap cross-sectional IC gate that comes before any portfolio backtest.</li>
+          <li><strong>20 hypotheses on the Warsaw Stock Exchange</strong>, 2011–2026, about 400 stocks: 17 tested, 3 still waiting for data. All are archived, rejected ones included. None has passed the full gate.</li>
+          <li><strong>Data forensics.</strong> 182 non-trading dates in the panel left the top-20 basket empty on a third of them. 7,935 negative adjusted closes in Yahoo data led to a frozen, audited snapshot, which 654 of 668 instruments passed.</li>
+          <li><strong>Method stack:</strong> pre-registration with a decision rule; Newey–West IC and Fama–MacBeth regressions; Benjamini–Hochberg with an effective number of tests; a cost wall with liquidity-tiered costs; purged walk-forward with embargo; positive controls that give each gate a minimum detectable effect; a research log that counts every run, failed ones included.</li>
+          <li><strong>Market as a parameter.</strong> Calendar, currency, risk-free rate and cost model form a market profile, so the same pipeline runs on Warsaw and US data.</li>
+          <li><strong>Event study: AI news and US stocks.</strong> A panel of 50 AI-related events &times; 32 US instruments (97,600 rows). In a pre-registered diagnostic, power and grid stocks drifted up about 1.75% before unscheduled events (33 event clusters), while scheduled events showed the opposite sign. Development-set exploration, with no significance claims.</li>
+        </ul>
+        <p>So far every run is post-hoc or technical; the count of formal tests is still zero. The cocoa and MSTR studies below were run alongside it.</p>
+        <p class="meta">Python, pytest, ruff, GitHub CI. Code not public yet.</p>
+      </div>
+      <div class="aside">
+        <div class="figure-num">17</div>
+        <p class="cap">hypotheses tested on Warsaw stocks and archived, rejected ones included</p>
       </div>
     </article>
 
@@ -172,11 +193,6 @@
         <p class="cap">unit and integration tests, including checks that the incremental cost matches the full recomputation</p>
       </div>
     </article>
-  </section>
-
-  <section aria-labelledby="markets">
-    <h2 id="markets">Market research</h2>
-    <p class="section-note">Exploratory studies on public and vendor data, each with the specification written down before the test.</p>
 
     <article class="project">
       <div>
@@ -209,22 +225,6 @@
         <p class="cap">out of sample over 1,251 sessions: sign accuracy 50.7% against 49.3% with a shuffled target</p>
       </div>
     </article>
-
-    <ul class="small-list">
-      <li><strong>Event study: AI news and US stocks</strong>. A panel of 50 AI-related events &times; 32 US instruments (97,600 rows). In a pre-registered diagnostic, power and grid stocks drifted up about 1.75% before unscheduled events (33 event clusters), while scheduled events showed the opposite sign. This is development-set exploration with no significance claims. Code not public.</li>
-      <li><strong>BONASUS: a research process for systematic strategies</strong>. An ongoing team project, building a reproducible pipeline that a hypothesis must pass before it counts:
-        <ul>
-          <li>data contract and benchmark;</li>
-          <li>pre-registration and a hypothesis registry;</li>
-          <li>information-coefficient tests with Newey–West errors and Benjamini–Hochberg correction;</li>
-          <li>a transaction-cost wall, purged walk-forward and power calibration.</li>
-        </ul>
-        The cocoa, MSTR and event studies above were run alongside it. Code not public yet.</li>
-    </ul>
-  </section>
-
-  <section aria-labelledby="finance">
-    <h2 id="finance">Derivatives pricing and hedging</h2>
 
     <article class="project">
       <div>
@@ -267,16 +267,16 @@
 
     <article class="project">
       <div>
-        <h3>Multiple-decrement life insurance</h3>
-        <p>Net premiums, prospective reserves and the split into risk and savings premiums for a 30-year policy whose benefit depends on the cause of death. Mortality comes from three models: constant force, Makeham, and the empirical Polish 2023 life tables, each calibrated separately for men and women.</p>
-        <p class="meta">Python, SciPy optimisation.</p>
-        <p class="links"><a href="https://github.com/MaciejKarawan/Multiple-Decrement-Model">Code</a></p>
+        <h3>Forecasting Australian beer production</h3>
+        <p>Quarterly production data (1990–2010) cleaned of three historically explained outliers, decomposed with four competing trend estimators, and forecast with AR(4) on residuals, SARIMA(0,0,0)(2,1,0)[4], and Amazon's pretrained Chronos model applied zero-shot. The forecasts were checked against real data for 2008–2023: SARIMA was the most accurate, ahead of Chronos, with the decomposition-based AR model clearly too optimistic.</p>
+        <p class="meta">With Filip Gaj. Python, statsmodels, Chronos, 2025.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/TS-project">Code</a><a href="https://github.com/MaciejKarawan/TS-project/blob/main/reports/Produkcja_piwa_w_Australii.pdf">Report (PL)</a></p>
+      </div>
+      <div class="aside">
+        <img src="assets/ts.png" alt="Yearly beer production 2008–2023: actual values against SARIMA, AR(4) and Chronos forecasts" loading="lazy" width="720" height="447">
+        <p class="cap">Actual production (black) vs. SARIMA, AR(4) and Chronos forecasts.</p>
       </div>
     </article>
-  </section>
-
-  <section aria-labelledby="montecarlo">
-    <h2 id="montecarlo">Monte Carlo methods</h2>
 
     <article class="project">
       <div>
@@ -303,27 +303,16 @@
         <p class="cap">Generalised LCG output for growing sample sizes.</p>
       </div>
     </article>
-  </section>
-
-  <section aria-labelledby="timeseries">
-    <h2 id="timeseries">Time series</h2>
 
     <article class="project">
       <div>
-        <h3>Forecasting Australian beer production</h3>
-        <p>Quarterly production data (1990–2010) cleaned of three historically explained outliers, decomposed with four competing trend estimators, and forecast with AR(4) on residuals, SARIMA(0,0,0)(2,1,0)[4], and Amazon's pretrained Chronos model applied zero-shot. The forecasts were checked against real data for 2008–2023: SARIMA was the most accurate, ahead of Chronos, with the decomposition-based AR model clearly too optimistic.</p>
-        <p class="meta">With Filip Gaj. Python, statsmodels, Chronos, 2025.</p>
-        <p class="links"><a href="https://github.com/MaciejKarawan/TS-project">Code</a><a href="https://github.com/MaciejKarawan/TS-project/blob/main/reports/Produkcja_piwa_w_Australii.pdf">Report (PL)</a></p>
-      </div>
-      <div class="aside">
-        <img src="assets/ts.png" alt="Yearly beer production 2008–2023: actual values against SARIMA, AR(4) and Chronos forecasts" loading="lazy" width="720" height="447">
-        <p class="cap">Actual production (black) vs. SARIMA, AR(4) and Chronos forecasts.</p>
+        <h3>Multiple-decrement life insurance</h3>
+        <p>Net premiums, prospective reserves and the split into risk and savings premiums for a 30-year policy whose benefit depends on the cause of death. Mortality comes from three models: constant force, Makeham, and the empirical Polish 2023 life tables, each calibrated separately for men and women.</p>
+        <p class="meta">Python, SciPy optimisation.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/Multiple-Decrement-Model">Code</a></p>
       </div>
     </article>
-  </section>
 
-  <section aria-labelledby="other">
-    <h2 id="other">Smaller projects</h2>
     <ul class="small-list">
       <li><strong><a href="https://github.com/MaciejKarawan/MancalaAI">Mancala AI</a></strong>: a Kalah engine with minimax plus alpha-beta pruning, and UCT Monte Carlo Tree Search, including a variant that reuses the search tree between moves.</li>
       <li><strong><a href="https://github.com/MaciejKarawan/Game-Of-Life">Game of Life</a></strong>: Conway's automaton with configurable birth and survival rules, an object-oriented engine kept separate from a Tkinter interface.</li>

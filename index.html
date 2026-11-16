@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maciej Karawan: projects in stochastic modelling and quantitative finance</title>
+<meta name="description" content="Projects by Maciej Karawan, mathematician: Monte Carlo methods, MCMC optimisation, derivative pricing and hedging, and index-composition research.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F3F5F7;
+    --ink: #1B2733;
+    --ink-soft: #4A5866;
+    --grid: #D5DCE3;
+    --path: #3D6B99;
+    --realised: #B23A48;
+    --measure: 40rem;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 1.0625rem/1.65 "Source Serif 4", Georgia, serif;
+  }
+  a { color: var(--path); text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+  a:hover { color: var(--realised); }
+  a:focus-visible { outline: 2px solid var(--realised); outline-offset: 3px; border-radius: 2px; }
+  h1, h2, h3 { font-family: "Schibsted Grotesk", system-ui, sans-serif; line-height: 1.15; margin: 0; }
+
+  .wrap { max-width: 68rem; margin: 0 auto; padding: 0 1.5rem; }
+
+  /* Hero */
+  header.wrap { padding-top: 4.5rem; }
+  h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); font-weight: 700; letter-spacing: -0.02em; }
+  .lede { max-width: var(--measure); font-size: 1.25rem; color: var(--ink-soft); margin: 1rem 0 0; }
+  .lede a { white-space: nowrap; }
+  figure.paths { margin: 2.5rem 0 0; }
+  canvas { display: block; width: 100%; height: clamp(220px, 34vw, 380px); border-top: 1px solid var(--grid); border-bottom: 1px solid var(--grid); }
+  figcaption { font-size: 0.9rem; color: var(--ink-soft); margin-top: 0.6rem; max-width: var(--measure); }
+  figcaption .swatch { display: inline-block; width: 1.2em; height: 2px; vertical-align: middle; background: var(--realised); margin-right: 0.3em; }
+  .redraw { font: inherit; color: var(--path); background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 0.18em; cursor: pointer; }
+  .redraw:hover { color: var(--realised); }
+  .redraw:focus-visible { outline: 2px solid var(--realised); outline-offset: 3px; }
+
+  /* Sections */
+  section { padding: 4rem 0 0; }
+  h2 { font-size: 1.6rem; font-weight: 600; padding-bottom: 0.6rem; border-bottom: 2px solid var(--ink); max-width: 100%; }
+  .section-note { max-width: var(--measure); color: var(--ink-soft); margin: 0.8rem 0 0; }
+
+  /* Project entries: text column + figure/number column */
+  .project { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; gap: 2.5rem; padding: 2.2rem 0; border-bottom: 1px solid var(--grid); }
+  .project:last-child { border-bottom: 0; }
+  .project h3 { font-size: 1.35rem; font-weight: 600; }
+  .project p { max-width: var(--measure); margin: 0.6rem 0 0; }
+  .project ul { max-width: var(--measure); margin: 0.6rem 0 0; padding-left: 1.1rem; }
+  .project li { margin: 0.25rem 0; }
+  .meta { color: var(--ink-soft); font-size: 0.95rem; margin-top: 0.8rem !important; }
+  .links { margin-top: 0.8rem !important; font-family: "Schibsted Grotesk", system-ui, sans-serif; font-weight: 500; font-size: 0.98rem; }
+  .links a + a { margin-left: 1.2rem; }
+
+  .aside { align-self: start; }
+  .aside img { width: 100%; height: auto; display: block; border: 1px solid var(--grid); background: #fff; }
+  .aside .cap { font-size: 0.85rem; color: var(--ink-soft); margin-top: 0.4rem; }
+  .figure-num { font-family: "Schibsted Grotesk", system-ui, sans-serif; font-weight: 700; font-size: 3.2rem; line-height: 1; letter-spacing: -0.02em; color: var(--path); font-variant-numeric: tabular-nums; }
+  .figure-num + .cap { margin-top: 0.5rem; font-size: 0.95rem; color: var(--ink-soft); }
+  .figure-pair { margin-top: 1.4rem; }
+
+  .small-list { list-style: none; padding: 0; margin: 1.2rem 0 0; max-width: var(--measure); }
+  .small-list li { padding: 0.9rem 0; border-bottom: 1px solid var(--grid); }
+  .small-list li:last-child { border-bottom: 0; }
+  .small-list strong { font-family: "Schibsted Grotesk", system-ui, sans-serif; font-weight: 600; }
+
+  footer.wrap { padding-bottom: 3rem; margin-top: 4rem; color: var(--ink-soft); font-size: 0.95rem; }
+  footer p { margin: 0; padding-top: 2rem; border-top: 1px solid var(--grid); }
+
+  @media (max-width: 52rem) {
+    header.wrap { padding-top: 3rem; }
+    .project { grid-template-columns: 1fr; gap: 1.2rem; }
+    .aside { max-width: 26rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <h1>Maciej Karawan</h1>
+  <p class="lede">Mathematician working on stochastic modelling: Monte Carlo methods, MCMC optimisation, and the pricing and hedging of derivatives. Below are selected projects, each with code and a write-up on <a href="https://github.com/MaciejKarawan">GitHub</a>.</p>
+
+  <figure class="paths">
+    <canvas id="paths" aria-label="Fan of simulated geometric Brownian motion paths with one highlighted path" role="img"></canvas>
+    <figcaption>
+      400 geometric Brownian motion paths over one trading year, using the WIG20 calibration from the hedging project below (σ = 26.56%, μ = 2.65%). <span class="swatch" aria-hidden="true"></span>One path is highlighted. <button class="redraw" id="redraw" type="button">Draw new paths</button>
+    </figcaption>
+  </figure>
+</header>
+
+<main class="wrap">
+
+  <section aria-labelledby="research">
+    <h2 id="research">Research projects</h2>
+
+    <article class="project">
+      <div>
+        <h3>Predicting mWIG40 index revisions</h3>
+        <p>Reconstructed the Warsaw Stock Exchange's mid-cap index rules from GPW Benchmark regulations and 19 published revisions, then ran the same pipeline forward to forecast the next quarterly revision.</p>
+        <p>I also tested whether buying likely index entrants early is a tradable strategy, with a pre-registered protocol: cluster bootstrap, permutation tests with a deflated threshold, a total-return benchmark, a regime split and a survivorship audit. The test found a look-ahead leak in the earlier backtest that had produced the headline result. After the fix the trading signal fails, while the score remains a significant predictor of which companies will enter the index.</p>
+        <p class="meta">Python, pandas, PDF scraping, bootstrap and permutation inference</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/mWIG40-Prediction">Code and reports</a></p>
+      </div>
+      <div class="aside">
+        <div class="figure-num">36 / 40</div>
+        <p class="cap">mWIG40 constituents reproduced for the March 2025 revision</p>
+        <div class="figure-pair">
+          <div class="figure-num">1,700+</div>
+          <p class="cap">configurations logged against the multiple-testing budget before the confirmatory test</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="project">
+      <div>
+        <h3>MCMC for public-transport timetabling</h3>
+        <p>Metropolis–Hastings and parallel tempering applied to the Periodic Event Scheduling Problem: choosing line offsets so that transfers work. Soft quadratic barriers keep the chain ergodic, and structured moves (component shifts, a targeted repair move with an exact Hastings ratio) explore a very multimodal cost landscape.</p>
+        <p>The code has a formally valid sampling mode with diminishing adaptation, a separate optimisation mode, convergence diagnostics (R̂, ESS), and benchmarks on synthetic networks, PESPlib instances and the GTFS feed of Koleje Dolnośląskie.</p>
+        <p class="meta">Python, NumPy, MCMC diagnostics, GTFS</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/mcmc_pesp">Code</a><a href="https://github.com/MaciejKarawan/mcmc_pesp/blob/main/docs/MATH_SPEC.md">Mathematical specification</a></p>
+      </div>
+      <div class="aside">
+        <div class="figure-num">423</div>
+        <p class="cap">unit and integration tests, including checks that the incremental cost matches the full recomputation</p>
+      </div>
+    </article>
+  </section>
+
+  <section aria-labelledby="finance">
+    <h2 id="finance">Derivatives pricing and hedging</h2>
+
+    <article class="project">
+      <div>
+        <h3>Delta and delta-gamma hedging on WIG20 in 2022</h3>
+        <p>Calibrated Black–Scholes to WIG20 as of 1 January 2022 and stress-tested delta hedging on 10,000 GBM and bootstrap paths, then on the real path of 2022, the year the war in Ukraine began. The study covers sensitivity to rehedging frequency, strike and volatility misspecification. With 0.4% transaction costs it builds delta-gamma hedges from binary options, using a closed-form hedge ratio derived to avoid a numerically unstable ratio of tiny gammas.</p>
+        <p class="meta">With Aleksander Żurowski. Financial Engineering I, 2025.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/DeltaHedge">Code</a><a href="https://github.com/MaciejKarawan/DeltaHedge/blob/main/reports/IF1_Projekt1.pdf">Report (PL)</a></p>
+      </div>
+      <div class="aside">
+        <img src="assets/deltahedge.png" alt="Quantile fans of GBM and bootstrap simulations against the real WIG20 path in 2022" loading="lazy" width="720" height="448">
+        <p class="cap">GBM and bootstrap quantile fans vs. the real 2022 path.</p>
+      </div>
+    </article>
+
+    <article class="project">
+      <div>
+        <h3>Finite differences for barrier options under uncertain volatility</h3>
+        <p>An explicit finite-difference solver for European and American knock-out options, with stability-driven grid design and a convergence study. It is extended to the Uncertain Volatility Model, where the PDE switches between σ₋ and σ₊ with the sign of gamma, and to a discrete cash dividend. The results include price surfaces, gamma-sign maps and early-exercise regions.</p>
+        <p class="meta">With Kacper Olczak. Financial Engineering I, 2025.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/Finite-Difference">Code</a><a href="https://github.com/MaciejKarawan/Finite-Difference/blob/main/reports/projekt2_IF.pdf">Report (PL)</a></p>
+      </div>
+      <div class="aside">
+        <img src="assets/finite-difference.png" alt="Up-and-out call price at t=0 for fixed volatilities and for an uncertain volatility band" loading="lazy" width="720" height="360">
+        <p class="cap">Under uncertain volatility (dashed) the price exceeds the price at either end of the band.</p>
+      </div>
+    </article>
+
+    <article class="project">
+      <div>
+        <h3>Quanto option on gold with a PLN payout</h3>
+        <p>Pricing and delta hedging of a call on XAU/USD paid in Polish złoty, under correlated GBMs simulated with a Cholesky factorisation. The analysis is run in two equivalent formulations, (USD/PLN, gold in USD) and (USD/PLN, gold in PLN), and compares the two through calibration, hedging P&amp;L and sensitivity heatmaps.</p>
+        <p class="meta">Financial Engineering I, 2025.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/Quantio-Options">Code</a></p>
+      </div>
+      <div class="aside">
+        <div class="figure-num">ρ ≈ −0.33</div>
+        <p class="cap">calibrated correlation between gold and USD/PLN, which sets the sign of the quanto drift correction</p>
+      </div>
+    </article>
+
+    <article class="project">
+      <div>
+        <h3>Multiple-decrement life insurance</h3>
+        <p>Net premiums, prospective reserves and the split into risk and savings premiums for a 30-year policy whose benefit depends on the cause of death. Mortality comes from three models: constant force, Makeham, and the empirical Polish 2023 life tables, each calibrated separately for men and women.</p>
+        <p class="meta">Python, SciPy optimisation.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/Multiple-Decrement-Model">Code</a></p>
+      </div>
+    </article>
+  </section>
+
+  <section aria-labelledby="montecarlo">
+    <h2 id="montecarlo">Monte Carlo methods</h2>
+
+    <article class="project">
+      <div>
+        <h3>Variance reduction for option pricing</h3>
+        <p>Crude Monte Carlo, stratified sampling with proportional and optimal allocation, antithetic variates and control variates, compared on European calls (where the Black–Scholes price is the ground truth) and on Asian calls. Optimal stratification gave the lowest variance, the narrowest intervals and exactly 95% coverage. The project also shows that lower variance does not automatically mean lower error.</p>
+        <p class="meta">With Paulina Adamek. Simulation and Monte Carlo Methods, 2024.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/MonteCarlo-Variance-Reduction">Code</a><a href="https://github.com/MaciejKarawan/MonteCarlo-Variance-Reduction/blob/main/reports/Redukcja-wariancji-Adamek-Karawan-Fina%C5%82.pdf">Report (PL)</a></p>
+      </div>
+      <div class="aside">
+        <img src="assets/montecarlo.png" alt="Bar chart of estimator variance by method; optimal stratification is lowest" loading="lazy" width="694" height="480">
+        <p class="cap">Estimator variance by method, R = 10,000.</p>
+      </div>
+    </article>
+
+    <article class="project">
+      <div>
+        <h3>Testing pseudo-random number generators</h3>
+        <p>LCG, generalised LCG, RC4 and xorshift implemented from scratch and run through χ², Kolmogorov–Smirnov, poker, monobit and birthday-spacings tests. Second-level testing, which checks whether per-block p-values are uniform, exposes linear generators that are too regular to be random even when they pass first-level tests.</p>
+        <p class="meta">With Paulina Adamek. Simulation and Monte Carlo Methods.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/PRNG-Tests">Code</a><a href="https://github.com/MaciejKarawan/PRNG-Tests/blob/main/reports/PRNG_Karawan_Adamek.pdf">Report (PL)</a></p>
+      </div>
+      <div class="aside">
+        <img src="assets/prng.png" alt="Histograms of generalised LCG output for increasing sample sizes" loading="lazy" width="720" height="459">
+        <p class="cap">Generalised LCG output for growing sample sizes.</p>
+      </div>
+    </article>
+  </section>
+
+  <section aria-labelledby="other">
+    <h2 id="other">Smaller projects</h2>
+    <ul class="small-list">
+      <li><strong><a href="https://github.com/MaciejKarawan/MancalaAI">Mancala AI</a></strong>: a Kalah engine with minimax plus alpha-beta pruning, and UCT Monte Carlo Tree Search, including a variant that reuses the search tree between moves.</li>
+      <li><strong><a href="https://github.com/MaciejKarawan/Game-Of-Life">Game of Life</a></strong>: Conway's automaton with configurable birth and survival rules, an object-oriented engine kept separate from a Tkinter interface.</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p>Maciej Karawan. Code for every project is on <a href="https://github.com/MaciejKarawan">github.com/MaciejKarawan</a>. Full reports are written in Polish.</p>
+</footer>
+
+<script>
+(function () {
+  var canvas = document.getElementById('paths');
+  var ctx = canvas.getContext('2d');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var N = 400, STEPS = 252, S0 = 2266.92, MU = 0.0265, SIGMA = 0.2656, DT = 1 / 252;
+  var raf = null;
+
+  function gauss() {
+    var u = 1 - Math.random(), v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function simulate() {
+    var paths = [], drift = (MU - 0.5 * SIGMA * SIGMA) * DT, vol = SIGMA * Math.sqrt(DT);
+    for (var i = 0; i < N; i++) {
+      var p = new Float32Array(STEPS + 1); p[0] = S0;
+      for (var t = 1; t <= STEPS; t++) p[t] = p[t - 1] * Math.exp(drift + vol * gauss());
+      paths.push(p);
+    }
+    return paths;
+  }
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function draw() {
+    if (raf) cancelAnimationFrame(raf);
+    var dpr = window.devicePixelRatio || 1;
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var paths = simulate();
+    var lo = Infinity, hi = -Infinity;
+    paths.forEach(function (p) { for (var t = 0; t <= STEPS; t++) { if (p[t] < lo) lo = p[t]; if (p[t] > hi) hi = p[t]; } });
+    lo = Math.max(lo, S0 * 0.35); hi = Math.min(hi, S0 * 2.4);
+    var pad = 12;
+    function x(t) { return (t / STEPS) * w; }
+    function y(v) { v = Math.min(Math.max(v, lo), hi); return pad + (1 - (Math.log(v) - Math.log(lo)) / (Math.log(hi) - Math.log(lo))) * (h - 2 * pad); }
+
+    var pathColor = css('--path'), red = css('--realised'), grid = css('--grid');
+    var highlight = paths[Math.floor(Math.random() * N)];
+
+    function frame(upTo) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = grid; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, y(S0)); ctx.lineTo(w, y(S0)); ctx.stroke();
+      ctx.strokeStyle = pathColor; ctx.globalAlpha = 0.09; ctx.lineWidth = 1;
+      for (var i = 0; i < N; i++) {
+        var p = paths[i]; ctx.beginPath(); ctx.moveTo(0, y(p[0]));
+        for (var t = 1; t <= upTo; t++) ctx.lineTo(x(t), y(p[t]));
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1; ctx.strokeStyle = red; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(0, y(highlight[0]));
+      for (var s = 1; s <= upTo; s++) ctx.lineTo(x(s), y(highlight[s]));
+      ctx.stroke();
+    }
+
+    if (reduce) { frame(STEPS); return; }
+    var start = null, duration = 1600;
+    function tick(ts) {
+      if (start === null) start = ts;
+      var k = Math.min(1, (ts - start) / duration);
+      var eased = 1 - Math.pow(1 - k, 3);
+      frame(Math.max(1, Math.round(eased * STEPS)));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+  }
+
+  document.getElementById('redraw').addEventListener('click', draw);
+  var resizeTimer;
+  window.addEventListener('resize', function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 200); });
+  draw();
+})();
+</script>
+</body>
+</html>

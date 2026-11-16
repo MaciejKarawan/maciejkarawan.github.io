@@ -73,6 +73,8 @@
   .small-list { list-style: none; padding: 0; margin: 1.2rem 0 0; max-width: var(--measure); }
   .small-list li { padding: 0.9rem 0; border-bottom: 1px solid var(--grid); }
   .small-list li:last-child { border-bottom: 0; }
+  .small-list ul { list-style: disc; padding-left: 1.1rem; margin: 0.4rem 0; }
+  .small-list li li { padding: 0.1rem 0; border-bottom: 0; }
   .small-list strong { font-family: "Schibsted Grotesk", system-ui, sans-serif; font-weight: 600; }
 
 
@@ -117,7 +119,7 @@
       <li><span class="when">Aug–Oct 2026</span><div><strong>Quant Researcher</strong>, Giulio Sp. z o.o.<p>Built a tool for falsifying quantitative hypotheses.</p></div></li>
       <li><span class="when">Since May 2024</span><div><strong>Senior Game Designer &amp; Mathematician</strong>, Wazdan<p>Slot game mathematics: RTP and volatility modelling (variance, skewness, kurtosis) and paytable design.</p></div></li>
       <li><span class="when">Since 2021</span><div><strong>Mathematics tutor</strong></div></li>
-      <li><span class="when">2-month internship</span><div><strong>Research Assistant</strong>, University of Sharjah, UAE</div></li>
+      <li><span class="when">2024, 2 months</span><div><strong>Research Assistant</strong>, University of Sharjah, UAE</div></li>
       <li><span class="when">2026</span><div><strong>MSc in Mathematics</strong> (Financial and Actuarial Mathematics), University of Wrocław<p>Thesis: Perfect simulation via strong stationary duality for Möbius monotone Markov chains.</p></div></li>
     </ul>
   </section>
@@ -170,6 +172,55 @@
         <p class="cap">unit and integration tests, including checks that the incremental cost matches the full recomputation</p>
       </div>
     </article>
+  </section>
+
+  <section aria-labelledby="markets">
+    <h2 id="markets">Market research</h2>
+    <p class="section-note">Exploratory studies on public and vendor data, each with the specification written down before the test.</p>
+
+    <article class="project">
+      <div>
+        <h3>Cocoa: weather, harvests and price</h3>
+        <p>Does observed weather in the West African cocoa belt give an edge on the cocoa price? I tested the chain weather &rarr; harvest &rarr; price &rarr; chocolate stocks one link at a time. Along the way I found that FAOSTAT assigns Ghana's crop year to the wrong season before 1996, and rebuilt the series from COCOBOD purchase records.</p>
+        <ul>
+          <li>Weather &rarr; harvest replicates Albright et al. (PNAS 2026) for Ghana: R² 0.59 against 0.68 in the paper.</li>
+          <li>Harvest &rarr; price is strong: Spearman &minus;0.35 to &minus;0.44, elasticity &minus;0.41 to &minus;0.95.</li>
+          <li>The pre-registered dry-season rain &rarr; price test finds nothing (n = 42 seasons).</li>
+        </ul>
+        <p class="meta">Python, statsmodels, TAMSAT and CHIRPS rainfall, HAC regression, Clark–West, Benjamini–Hochberg</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/Cocoa-Weather-Price">Code</a><a href="cocoa/">Dashboard (PL)</a></p>
+      </div>
+      <div class="aside">
+        <img src="assets/cocoa_harvest_price.png" alt="Scatter of yearly change in West African cocoa production against the change in price a year later, sloping downwards" loading="lazy" width="1125" height="660">
+        <p class="cap">Change in production against change in price a year later.</p>
+      </div>
+    </article>
+
+    <article class="project">
+      <div>
+        <h3>MSTR vs BTC: premium and a forecast test</h3>
+        <p>Can the bitcoin move known before the US open forecast Strategy's (MSTR) session return? I built a point-in-time panel in which the balance sheet, BTC holdings and share count apply only from the session after publication. I rebuilt the pre-open BTC move from hourly bars and used a walk-forward test against a shuffled-target control.</p>
+        <p>Daily changes in market cap split into about 44% BTC and 56% change in the premium over NAV. The out-of-sample information coefficient is about zero and the signal's Sharpe ratio is &minus;0.26 before costs. A valuation curve maps a BTC price to an MSTR price through common-equity NAV.</p>
+        <p class="meta">Python, pandas, SEC EDGAR timestamps, HAC regression, walk-forward evaluation</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/MSTR-BTC-Premium">Code</a></p>
+      </div>
+      <div class="aside">
+        <div class="figure-num">IC &asymp; 0</div>
+        <p class="cap">out of sample over 1,251 sessions: sign accuracy 50.7% against 49.3% with a shuffled target</p>
+      </div>
+    </article>
+
+    <ul class="small-list">
+      <li><strong>Event study: AI news and US stocks</strong>. A panel of 50 AI-related events &times; 32 US instruments (97,600 rows). In a pre-registered diagnostic, power and grid stocks drifted up about 1.75% before unscheduled events (33 event clusters), while scheduled events showed the opposite sign. This is development-set exploration with no significance claims. Code not public.</li>
+      <li><strong>BONASUS: a research process for systematic strategies</strong>. An ongoing team project, building a reproducible pipeline that a hypothesis must pass before it counts:
+        <ul>
+          <li>data contract and benchmark;</li>
+          <li>pre-registration and a hypothesis registry;</li>
+          <li>information-coefficient tests with Newey–West errors and Benjamini–Hochberg correction;</li>
+          <li>a transaction-cost wall, purged walk-forward and power calibration.</li>
+        </ul>
+        The cocoa, MSTR and event studies above were run alongside it. Code not public yet.</li>
+    </ul>
   </section>
 
   <section aria-labelledby="finance">

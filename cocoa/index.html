@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cocoa: weather, harvests and price (exploratory dashboard)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<script src="d3.min.js"></script>
+<style>
+:root {
+  --font-anthropic-sans: "Schibsted Grotesk", system-ui, sans-serif;
+  --font-anthropic-serif: "Source Serif 4", Georgia, serif;
+  --color-bg: #F3F5F7; --color-fg: #1B2733; --color-fg-muted: #4A5866;
+  --color-panel: #FFFFFF; --color-border-line: #D5DCE3;
+  --color-ok: #2F7A55; --color-warn: #A86B12; --color-bad: #B23A48;
+  --cds-border: #D5DCE3; --cds-surface-popover: #FFFFFF; --cds-text-secondary: #4A5866;
+  --cds-shadow-popover: 0 4px 14px rgba(27,39,51,.12);
+  --cds-chart-axis: #8794A1; --cds-chart-grid: #E3E8ED; --cds-chart-muted: #A9B4BF; --cds-chart-reference: #1B2733;
+  --cds-dur-slow: 400ms; --cds-radius: 6px;
+  --cds-gap-xs: .25rem; --cds-gap-sm: .5rem; --cds-gap-md: 1rem; --cds-gap-lg: 1.75rem;
+  --cds-pad-xs: .25rem; --cds-pad-sm: .5rem; --cds-pad-lg: 1.25rem;
+  --cds-font-size-caption: .82rem; --cds-font-size-body: 1rem; --cds-font-size-heading: 1.2rem; --cds-font-size-title: 2rem;
+  --cds-font-weight-medium: 600;
+}
+html { background: var(--color-bg); }
+body { margin: 0; padding: 2rem clamp(1rem, 4vw, 2.5rem) 4rem; color: var(--color-fg); font-family: var(--font-anthropic-sans); }
+.intro { max-width: 76rem; margin: 0 auto 2rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--color-border-line); font-size: .95rem; line-height: 1.55; color: var(--color-fg-muted); }
+.intro p { margin: .3rem 0 0; max-width: 72ch; }
+.intro a { color: #3D6B99; }
+.dash-skeleton { opacity: .45; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+<script>
+window.dash = (() => {
+  const IDS = ['werdykt', 'ceny', 'krzywe', 'pogoda', 'pogoda_szeregi', 'pokrycie', 'sezonowosc', 'spolki', 'strategie', 'zbiory', 'zdarzenia'];
+  const store = Object.fromEntries(IDS.map((id) => [id, { status: 'loading', data: null }]));
+  const subs = [];
+  const fire = () => subs.forEach((cb) => cb());
+  IDS.forEach((id) => fetch(`data/${id}.json`)
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then((d) => { store[id] = { status: 'ok', data: d }; fire(); })
+    .catch(() => { store[id] = { status: 'error', data: null }; fire(); }));
+  return {
+    colors: ['#3D6B99', '#B23A48', '#C08A2E', '#2F7A55', '#7A5C99', '#5F6B77', '#4FA3B8', '#9C6B4E'],
+    data: (id) => store[id] || { status: 'error', data: null },
+    onData: (cb) => { subs.push(cb); cb(); },
+    setLink: (h) => history.replaceState(null, '', '#' + h),
+  };
+})();
+</script>
+</head>
+<body>
+<div class="intro" lang="en">
+  <a href="../">&larr; Maciej Karawan</a>
+  <p><strong>Cocoa: does weather give an edge?</strong> Exploratory dashboard from the first pass of a study linking West African weather, harvests and the cocoa price (October 2026). The interface is in Polish. Later revisions changed the weather &rarr; harvest verdict; current results and code are in the <a href="https://github.com/MaciejKarawan/Cocoa-Weather-Price">repository</a>.</p>
+</div>
+<div id="dash-root">
+<style>
+#dash-root { --dash-gutter: var(--cds-pad-lg); }
+.kk { font-family: var(--font-anthropic-sans); color: var(--color-fg); max-width: 76rem; margin-inline: auto; display: grid; gap: var(--cds-gap-lg); }
+.kk h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+.kk h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; text-wrap: balance; }
+.kk h3 { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: 0; }
+.kk p { margin: 0; line-height: 1.55; max-width: 72ch; }
+.kk-teza { font-size: var(--cds-font-size-body); color: var(--color-fg); }
+.kk-glowa { display: grid; gap: var(--cds-gap-sm); }
+.kk-zakladki { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); border-bottom: 1px solid var(--color-border-line); padding-bottom: var(--cds-pad-xs); }
+.kk-zakladki button { font: inherit; font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid transparent; border-radius: var(--cds-radius); background: transparent; color: var(--color-fg-muted); cursor: pointer; }
+.kk-zakladki button[aria-selected="true"] { color: var(--color-fg); border-color: var(--color-border-line); background: var(--color-panel); }
+.kk-zakladki button:focus-visible, .kk-wybor button:focus-visible { outline: 2px solid var(--cds-chart-reference); outline-offset: 1px; }
+.kk-strona { display: grid; gap: var(--cds-gap-md); }
+.kk-strona[hidden] { display: none; }
+.kk-siatka { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+.kk-karta { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-sm); min-width: 0; align-content: start; }
+.kk-nota { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); line-height: 1.5; max-width: 80ch; }
+.kk-wykres { position: relative; min-height: 260px; }
+.kk-wykres.kk-niski { min-height: 220px; }
+.kk-wykres svg { display: block; overflow: visible; }
+.kk-os text, text.kk-os { fill: var(--color-fg-muted); font-size: var(--cds-font-size-caption); font-family: var(--font-anthropic-sans); }
+.kk-et { fill: var(--color-fg); font-size: var(--cds-font-size-caption); font-family: var(--font-anthropic-sans); }
+.kk-dymek { position: absolute; pointer-events: none; z-index: 2; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kk-dymek .kk-d-glowa { color: var(--cds-text-secondary); margin-bottom: 2px; }
+.kk-dymek .kk-d-w { display: flex; gap: var(--cds-gap-sm); align-items: center; justify-content: space-between; }
+.kk-sw { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 2px; margin-right: 4px; }
+.kk-tab-ramka { overflow: auto; max-height: 30rem; }
+.kk table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.kk th, .kk td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+.kk th { color: var(--color-fg-muted); font-weight: var(--cds-font-weight-medium); position: sticky; top: 0; background: var(--color-panel); z-index: 1; white-space: nowrap; }
+.kk .kk-l { text-align: left; }
+.kk td { white-space: nowrap; }
+.kk td.kk-l { white-space: normal; min-width: 8rem; }
+.kk-pigulka { display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--color-border-line); white-space: nowrap; }
+.kk-pigulka[data-ocena="silny związek"] { color: var(--color-ok); border-color: currentColor; }
+.kk-pigulka[data-ocena="słaby ślad"] { color: var(--color-warn); border-color: currentColor; }
+.kk-pigulka[data-ocena="brak sygnału"] { color: var(--color-fg-muted); }
+.kk-wybor { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); align-items: center; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.kk-wybor button { font: inherit; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--color-border-line); background: transparent; color: var(--color-fg); cursor: pointer; }
+.kk-wybor button[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); border-color: var(--color-fg); }
+.kk-legenda { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.kk-liczby { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); }
+.kk-liczba { display: grid; gap: 2px; }
+.kk-liczba b { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+.kk-liczba span { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.kk ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 4px; line-height: 1.5; max-width: 80ch; }
+.kk-blad { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: inherit; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.kk-blad::before { content: ""; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--color-bad); }
+[data-dash-source-state=empty] { color: transparent; }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+</style>
+
+<div class="kk">
+  <header class="kk-glowa" id="naglowek">
+    <h1>Kakao: czy pogoda daje przewagę</h1>
+    <p class="kk-teza">Obserwowana pogoda w pasie kakaowym i stan ENSO nie dają sygnału tradingowego na horyzoncie miesięcy: żaden test w rodzinach pogodowych nie przechodzi korekty BH. Działa natomiast kanał podaży: wzrost produkcji WKS i Ghany idzie w parze ze spadkiem ceny w kolejnym roku (ρ Spearmana <b class="kk-v" data-source="zbiory" data-field="spearman" data-where="klucz=pc%7Ccena w roku Y%2B1" data-fmt="s2">—</b>). Brakującym ogniwem jest pogoda → zbiory, a to wymaga lepszych danych opadowych.</p>
+  </header>
+
+  <nav class="kk-zakladki" role="tablist" aria-label="Sekcje">
+    <button role="tab" data-strona="werdykt" id="t-werdykt">Werdykt</button>
+    <button role="tab" data-strona="dane" id="t-dane">Ceny i dane</button>
+    <button role="tab" data-strona="sezonowosc" id="t-sezonowosc">Sezonowość</button>
+    <button role="tab" data-strona="pogoda" id="t-pogoda">Pogoda → cena</button>
+    <button role="tab" data-strona="zbiory" id="t-zbiory">Zbiory</button>
+    <button role="tab" data-strona="strategie" id="t-strategie">Strategie</button>
+    <button role="tab" data-strona="spolki" id="t-spolki">Spółki</button>
+    <button role="tab" data-strona="enso" id="t-enso">Komunikaty ENSO</button>
+    <button role="tab" data-strona="metoda" id="t-metoda">Metoda</button>
+  </nav>
+
+  <!-- WERDYKT -->
+  <section class="kk-strona" id="werdykt" role="tabpanel">
+    <div class="kk-karta" id="karta-werdykt">
+      <h2>Odpowiedź na pytanie „czy warto się w to bawić”</h2>
+      <p class="kk-nota">Ocena słowna każdego ogniwa łańcucha pogoda → zbiory → cena → spółki. „Nie widzę” znaczy: test o zmierzonej mocy nie znalazł efektu, a nie że efektu nie ma.</p>
+      <div class="kk-tab-ramka"><table id="tab-werdykt" data-source="werdykt" data-row-key="klucz"></table></div>
+    </div>
+    <div class="kk-siatka">
+      <div class="kk-karta" id="karta-moc">
+        <h2>Co dało się wykryć</h2>
+        <p class="kk-nota">Minimalny efekt wykrywalny z mocą 80% przy dwustronnym teście 5% (MDE). Efekty mniejsze niż te progi były dla tych danych niewidoczne.</p>
+        <div class="kk-liczby">
+          <div class="kk-liczba"><b class="kk-v" data-source="sezonowosc" data-field="mde_miesiaca" data-where="klucz=t%7Cpink" data-fmt="pct1">—</b><span>średni zwrot jednego miesiąca kalendarzowego, Pink Sheet, 66 lat</span></div>
+          <div class="kk-liczba"><b class="kk-v" data-source="pogoda" data-field="mde_r2" data-where="klucz=r%7Cpink%7CR3%7C1" data-fmt="pct1">—</b><span>R² predyktora pogody dla zwrotu następnego miesiąca, Pink Sheet</span></div>
+          <div class="kk-liczba"><b class="kk-v" data-source="zbiory" data-field="mde_rho" data-where="klucz=pp%7Csezon Y%2FY%2B1%7Copad_IV_IX" data-fmt="f2">—</b><span>|ρ| pogoda ↔ zmiana produkcji, dane roczne</span></div>
+          <div class="kk-liczba"><b class="kk-v" data-source="zdarzenia" data-field="mde" data-where="klucz=t%7Cccf%7C%5B0%2C%2B1%5D" data-fmt="pct1">—</b><span>średni skumulowany zwrot w dniach [0, +1] po zmianie statusu ENSO</span></div>
+        </div>
+      </div>
+      <div class="kk-karta" id="karta-rekomendacja">
+        <h2>Rekomendacja</h2>
+        <p>Nie budować teraz sygnału ani kalibracji modeli pogodowych na podstawie obserwowanej pogody z reanalizy. Jeden tani krok rozstrzygający: powtórzyć ogniwo pogoda → zbiory na opadach CHIRPS z maską upraw i oknami fenologicznymi. Jeśli pogoda wyjaśni istotną część zmienności produkcji, kolejny krok to prognozy sezonowe (Copernicus) i test, czy wyprzedzają rynek. Jeśli nie wyjaśni, wątek zamknąć.</p>
+        <p class="kk-nota">Za: silny związek produkcji z ceną, więc trafna prognoza zbiorów byłaby warta pieniędzy. Przeciw: indeks z reanalizy nie wyjaśnia ani zbiorów, ani ceny, a ENSO, główne źródło przewidywalności sezonowej w Afryce Zachodniej, daje tylko słaby ślad.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CENY I DANE -->
+  <section class="kk-strona" id="dane" role="tabpanel" hidden>
+    <div class="kk-karta" id="karta-ceny">
+      <h2>Cena kakao w trzech szeregach</h2>
+      <p class="kk-nota">Indeks, styczeń 2010 = 100, skala logarytmiczna. Pink Sheet to średnia miesięczna ceny (długa historia), COCO.L to ETC na rolowanym indeksie futures (zwroty do strategii), CC=F to ciągły kontrakt najbliższy ICE NY bez korekty rolowania.</p>
+      <div class="kk-wykres" id="wyk-ceny" data-source="ceny"></div>
+    </div>
+    <div class="kk-siatka">
+      <div class="kk-karta" id="karta-pokrycie">
+        <h2>Pokrycie szeregów</h2>
+        <p class="kk-nota">Zwroty miesięczne do ostatniego pełnego miesiąca; sd to odchylenie standardowe log-zwrotu miesięcznego.</p>
+        <table id="tab-pokrycie" data-source="pokrycie" data-row-key="klucz"></table>
+      </div>
+      <div class="kk-karta" id="karta-rolowanie">
+        <h2>Kontrola rolowania</h2>
+        <p>Zwroty miesięczne CC=F i COCO.L mają korelację <b class="kk-v" data-source="pokrycie" data-field="korelacja" data-where="klucz=rolowanie" data-fmt="f3">—</b> na <b class="kk-v" data-source="pokrycie" data-field="n" data-where="klucz=rolowanie" data-fmt="int">—</b> miesiącach. Średnia roczna różnica wynosi <b class="kk-v" data-source="pokrycie" data-field="roznica_roczna" data-where="klucz=rolowanie" data-fmt="spct1">—</b>; to efekt rolowania, oprocentowania zabezpieczenia i opłat ETC. Do strategii używam COCO.L.</p>
+        <p class="kk-nota">Pogoda: NASA POWER od <b class="kk-v" data-source="pokrycie" data-field="od" data-where="klucz=pogoda">—</b> do <b class="kk-v" data-source="pokrycie" data-field="do" data-where="klucz=pogoda">—</b>. Komunikaty CPC o ENSO z datą i statusem: <b class="kk-v" data-source="pokrycie" data-field="n" data-where="klucz=cpc" data-fmt="int">—</b>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEZONOWOŚĆ -->
+  <section class="kk-strona" id="sezonowosc" role="tabpanel" hidden>
+    <div class="kk-wybor" id="wybor-sezon" aria-label="Szereg"></div>
+    <div class="kk-siatka">
+      <div class="kk-karta" id="karta-sezon-srednie">
+        <h2>Średni log-zwrot według miesiąca</h2>
+        <p class="kk-nota">Słupek to średnia, wąs to ±1,96 błędu standardowego. Pojedynczy miesiąc odstaje dopiero wtedy, gdy wąs nie przecina zera i przetrwa korektę BH na 12 miesięcy.</p>
+        <div class="kk-wykres" id="wyk-sezon" data-source="sezonowosc"></div>
+      </div>
+      <div class="kk-karta" id="karta-spektrum">
+        <h2>Widmo wielooknowe zwrotów</h2>
+        <p class="kk-nota">Thomson, 7 okien. Linia przerywana to 95% tła AR(1). Sezonowość dałaby pik ponad tłem przy 1 lub 2 cyklach na rok; test F linii harmonicznej jest w tabeli niżej.</p>
+        <div class="kk-wykres" id="wyk-spektrum" data-source="sezonowosc"></div>
+      </div>
+    </div>
+    <div class="kk-karta" id="karta-sezon-testy">
+      <h2>Testy sezonowości średniej i zmienności</h2>
+      <p class="kk-nota">Wald: łączny test równości 12 średnich (HAC) i test dwóch par harmonik. Kruskal–Wallis: test rangowy. OOS R²: prognoza „średnia tego miesiąca z Pink Sheet do roku poprzedniego” względem średniej historycznej, Clark–West jednostronnie. Zmienność: test równości logarytmu zmienności zrealizowanej między miesiącami.</p>
+      <div class="kk-tab-ramka"><table id="tab-sezon-testy" data-source="sezonowosc" data-row-key="klucz"></table></div>
+    </div>
+    <div class="kk-karta" id="karta-zmiennosc">
+      <h2>Zmienność zrealizowana według miesiąca</h2>
+      <p class="kk-nota">Roczna zmienność z dziennych zwrotów, średnio dla miesiąca kalendarzowego.</p>
+      <div class="kk-wykres kk-niski" id="wyk-zmiennosc" data-source="sezonowosc"></div>
+    </div>
+  </section>
+
+  <!-- POGODA → CENA -->
+  <section class="kk-strona" id="pogoda" role="tabpanel" hidden>
+    <div class="kk-karta" id="karta-pogoda-opis">
+      <h2>Czy pogoda i ENSO przewidują zwrot kakao</h2>
+      <p class="kk-nota">Każdy predyktor ma znak z hipotezy (susza, upał, El Niño → mniej kakao → wyższa cena), więc dodatnie t znaczy „zgodnie z hipotezą”. Sygnał z końca miesiąca t używa danych do miesiąca t−1 (opóźnienie publikacji), cel to log-zwrot z t do t+h. Anomalie standaryzowane tylko na przeszłości. Błędy HAC, BH w rodzinie 21 testów na szereg. OOS: współczynniki z próby rozszerzającej się, Clark–West względem średniej historycznej.</p>
+      <div class="kk-wybor" id="wybor-pogoda" aria-label="Szereg"></div>
+      <div class="kk-legenda" id="leg-pogoda"></div>
+      <div class="kk-tab-ramka"><table id="tab-pogoda" data-source="pogoda" data-row-key="klucz"></table></div>
+    </div>
+    <div class="kk-siatka">
+      <div class="kk-karta" id="karta-rownoczesne">
+        <h2>Pogoda i cena w tym samym oknie</h2>
+        <p class="kk-nota">Zwrot w tych samych trzech miesiącach co okno pogody. Gdyby rynek wyceniał pogodę na bieżąco, t byłoby wyraźnie dodatnie.</p>
+        <table id="tab-rownoczesne" data-source="pogoda" data-row-key="klucz"></table>
+      </div>
+      <div class="kk-karta" id="karta-sezonowe-kor">
+        <h2>Eksploracja: kiedy opad ma znaczenie</h2>
+        <p class="kk-nota">ρ Spearmana między opadem z 3 miesięcy kończących się w danym miesiącu (dodatni: sucho) a zwrotem Pink Sheet w kolejnych 3 miesiącach. 12 testów poza rodziną główną, tylko do generowania hipotez.</p>
+        <div class="kk-wykres kk-niski" id="wyk-sezonowe-kor" data-source="pogoda"></div>
+      </div>
+    </div>
+    <div class="kk-karta" id="karta-pogoda-szeregi">
+      <h2>Opad w pasie kakaowym i Niño3.4</h2>
+      <p class="kk-nota">Anomalia opadu z 3 miesięcy (z, dodatnia: mokro) i anomalia Niño3.4 (z). Indeks opadu to średnia 10 punktów NASA POWER, wagi WKS 0,7 i Ghana 0,3.</p>
+      <div class="kk-wykres" id="wyk-pogoda-szeregi" data-source="pogoda_szeregi"></div>
+    </div>
+  </section>
+
+  <!-- ZBIORY -->
+  <section class="kk-strona" id="zbiory" role="tabpanel" hidden>
+    <div class="kk-siatka">
+      <div class="kk-karta" id="karta-produkcja">
+        <h2>Produkcja ziarna kakao</h2>
+        <p class="kk-nota">FAOSTAT, tysiące ton rocznie.</p>
+        <div class="kk-wykres" id="wyk-produkcja" data-source="zbiory"></div>
+      </div>
+      <div class="kk-karta" id="karta-rozrzut">
+        <h2>Zmiana produkcji a zmiana ceny rok później</h2>
+        <p class="kk-nota">Każdy punkt to rok FAO: zmiana log-produkcji WKS+Ghana i zmiana log średniej ceny Pink Sheet w roku następnym.</p>
+        <div class="kk-wykres" id="wyk-rozrzut" data-source="zbiory"></div>
+      </div>
+    </div>
+    <div class="kk-siatka">
+      <div class="kk-karta" id="karta-produkcja-cena">
+        <h2>Zbiory → cena</h2>
+        <p class="kk-nota">Elastyczność: nachylenie zmiany ceny względem zmiany produkcji (HAC).</p>
+        <table id="tab-produkcja-cena" data-source="zbiory" data-row-key="klucz"></table>
+      </div>
+      <div class="kk-karta" id="karta-pogoda-produkcja">
+        <h2>Pogoda → zbiory</h2>
+        <p class="kk-nota">Okna dla sezonu S/S+1: opad IV–IX S, pora sucha XII S−1 – II S, Tmax IV–IX S, Niño3.4 VII S−1 – VI S. Nie wiem, czy rok FAO to sezon Y/Y+1 czy Y−1/Y, więc liczę oba warianty.</p>
+        <div class="kk-tab-ramka"><table id="tab-pogoda-produkcja" data-source="zbiory" data-row-key="klucz"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STRATEGIE -->
+  <section class="kk-strona" id="strategie" role="tabpanel" hidden>
+    <div class="kk-karta" id="karta-krzywe">
+      <h2>Skumulowany log-zwrot strategii</h2>
+      <p class="kk-nota">Pozycje bez estymacji: znak z hipotezy albo ze średniej historycznej, rebalans miesięczny, bez kosztów. Złożona strategia pogodowa to średnia sześciu predyktorów ze znakiem hipotezy.</p>
+      <div class="kk-wykres" id="wyk-krzywe" data-source="krzywe"></div>
+    </div>
+    <div class="kk-karta" id="karta-strategie">
+      <h2>Wyniki strategii</h2>
+      <p class="kk-nota">t z błędów HAC; q BH w rodzinie strategii pogodowych danego instrumentu. Sharpe roczny, bez stopy wolnej od ryzyka.</p>
+      <div class="kk-tab-ramka"><table id="tab-strategie" data-source="strategie" data-row-key="klucz"></table></div>
+    </div>
+  </section>
+
+  <!-- SPÓŁKI -->
+  <section class="kk-strona" id="spolki" role="tabpanel" hidden>
+    <div class="kk-siatka">
+      <div class="kk-karta" id="karta-beta">
+        <h2>Reakcja spółek w tym samym miesiącu</h2>
+        <p class="kk-nota">Beta zwrotu spółki ponad indeks (SMI dla spółek szwajcarskich, S&amp;P 500 dla amerykańskich) względem zwrotu COCO.L, ten sam miesiąc.</p>
+        <table id="tab-beta" data-source="spolki" data-row-key="klucz"></table>
+      </div>
+      <div class="kk-karta" id="karta-nadwyzki">
+        <h2>Skumulowany zwrot ponad indeks</h2>
+        <p class="kk-nota">Log-zwrot spółki minus log-zwrot jej indeksu, narastająco.</p>
+        <div class="kk-wykres" id="wyk-nadwyzki" data-source="spolki"></div>
+      </div>
+    </div>
+    <div class="kk-karta" id="karta-predykcja">
+      <h2>Czy wcześniejszy ruch kakao przewiduje spółki</h2>
+      <p class="kk-nota">Zwrot ponad indeks w kolejnych h miesiącach względem zwrotu COCO.L z ostatnich k miesięcy. b na 1 sd sygnału. BH w rodzinie 32 testów.</p>
+      <div class="kk-tab-ramka"><table id="tab-predykcja" data-source="spolki" data-row-key="klucz"></table></div>
+    </div>
+  </section>
+
+  <!-- ENSO -->
+  <section class="kk-strona" id="enso" role="tabpanel" hidden>
+    <div class="kk-siatka">
+      <div class="kk-karta" id="karta-car">
+        <h2>Zwrot wokół zmiany statusu ENSO</h2>
+        <p class="kk-nota">Średni skumulowany zwrot ponadnormalny ze znakiem kierunku zmiany (+ w stronę El Niño). Dodatnia ścieżka po dniu 0 znaczyłaby reakcję zgodną z hipotezą.</p>
+        <div class="kk-wykres" id="wyk-car" data-source="zdarzenia"></div>
+      </div>
+      <div class="kk-karta" id="karta-enso-zm">
+        <h2>Zmienność w dniu komunikatu</h2>
+        <p class="kk-nota">Średni |zwrot| CC=F w dniu każdego komunikatu CPC i w pozostałe czwartki.</p>
+        <div class="kk-liczby">
+          <div class="kk-liczba"><b class="kk-v" data-source="zdarzenia" data-field="srednia_abs_kom" data-where="klucz=z%7Cccf" data-fmt="pct2">—</b><span>dzień komunikatu</span></div>
+          <div class="kk-liczba"><b class="kk-v" data-source="zdarzenia" data-field="srednia_abs_inne" data-where="klucz=z%7Cccf" data-fmt="pct2">—</b><span>pozostałe czwartki</span></div>
+          <div class="kk-liczba"><b class="kk-v" data-source="zdarzenia" data-field="p_mw" data-where="klucz=z%7Cccf" data-fmt="p">—</b><span>p Manna–Whitneya</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="kk-karta" id="karta-enso-testy">
+      <h2>Testy okien zdarzenia</h2>
+      <p class="kk-nota">Model stałej średniej z okna [−260, −11] sesji. t: przekrojowy test średniej, p znaków: test dwumianowy.</p>
+      <div class="kk-tab-ramka"><table id="tab-enso-testy" data-source="zdarzenia" data-row-key="klucz"></table></div>
+    </div>
+    <div class="kk-karta" id="karta-enso-lista">
+      <h2>Zmiany statusu ENSO w komunikatach CPC</h2>
+      <p class="kk-nota">Kierunek +1: w stronę El Niño (nowy watch lub advisory dla El Niño, koniec La Niña); −1: w stronę La Niña.</p>
+      <div class="kk-tab-ramka"><table id="tab-enso-lista" data-source="zdarzenia" data-row-key="klucz"></table></div>
+    </div>
+  </section>
+
+  <!-- METODA -->
+  <section class="kk-strona" id="metoda" role="tabpanel" hidden>
+    <div class="kk-siatka">
+      <div class="kk-karta" id="karta-metoda">
+        <h2>Jak liczone</h2>
+        <ul>
+          <li>Rodziny testów ustalone przed obejrzeniem wyników; korekta BH w każdej rodzinie. Kierunek predyktorów pogodowych z hipotezy, nie z danych.</li>
+          <li>Zwroty: log, miesięczne, do ostatniego pełnego miesiąca. Nakładające się horyzonty: błędy HAC z lagiem co najmniej h−1.</li>
+          <li>Sygnał z końca miesiąca używa pogody i ENSO z miesiąca wcześniej, żeby nie wykorzystać danych przed ich publikacją. Anomalie liczone tylko z wcześniejszych lat.</li>
+          <li>Poza próbą: współczynniki z próby, której cele były w pełni znane w chwili prognozy; porównanie ze średnią historyczną testem Clarka–Westa.</li>
+          <li>Sezonowość: test łączny 12 średnich, harmoniki, Kruskal–Wallis, widmo Thomsona z testem F linii, strategia kalendarzowa poza próbą.</li>
+          <li>Event study: komunikaty CPC od połowy 2016 r., dzień 0 to dzień publikacji (9:00 czasu NY, przed zamknięciem sesji).</li>
+        </ul>
+      </div>
+      <div class="kk-karta" id="karta-zalozenia">
+        <h2>Założenia i ograniczenia</h2>
+        <ul>
+          <li>[ZAŁOŻENIE] 10 punktów NASA POWER reprezentuje pas kakaowy; bez mapy upraw. Wagi krajów 0,7 i 0,3 to przybliżone udziały w produkcji.</li>
+          <li>Opad z reanalizy MERRA-2 jest słaby w tropikach; to najbardziej prawdopodobna przyczyna braku związku pogoda → zbiory.</li>
+          <li>Długie zapytanie dzienne NASA POWER zwraca opad pomnożony przez 24; skorygowane i sprawdzone co do miesiąca z oficjalnymi sumami miesięcznymi.</li>
+          <li>[ZAŁOŻENIE] COCO.L odwzorowuje rolowany indeks futures kakao ICE NY. Darmowe źródła nie dają historii wygasłych kontraktów, więc nie ma krzywej terminowej.</li>
+          <li>[DO WERYFIKACJI] przypisanie roku FAO do sezonu; FAO zawiera szacunki, a przemyt między WKS i Ghaną znosi się w sumie dwóch krajów.</li>
+          <li>Wartości ENSO i reanalizy są dzisiejszymi wersjami, nie tym, co rynek widział w czasie rzeczywistym.</li>
+        </ul>
+      </div>
+      <div class="kk-karta" id="karta-pominiete">
+        <h2>Czego nie zrobiłem</h2>
+        <ul>
+          <li>SARIMA i falki: przy braku sezonowości średniej nie zmieniłyby wniosku.</li>
+          <li>Prognozy sezonowe Copernicus i CHIRPS: zgodnie z decyzją, na razie bez Copernicusa; CHIRPS to rekomendowany następny krok.</li>
+          <li>Kalendarz ICCO, przemiału i przyjazdów do portów: bez płatnych źródeł nie da się go odtworzyć rzetelnie.</li>
+          <li>Koszty transakcyjne w strategiach: przy braku sygnału brutto nie były potrzebne.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const F = {
+    p: (v) => (v < 0.001 ? '<0.001' : d3.format('.3f')(v)),
+    f1: d3.format('.1f'), f2: d3.format('.2f'), f3: d3.format('.3f'), s2: d3.format('+.2f'), s3: d3.format('+.3f'),
+    pct1: d3.format('.1%'), pct2: d3.format('.2%'), spct1: d3.format('+.1%'), spct2: d3.format('+.2%'),
+    int: d3.format(','), sint: d3.format('+d'), txt: (v) => String(v),
+  };
+  const pokaz = (v, f) => (v === null || v === undefined || (typeof v === 'number' && !Number.isFinite(v))) ? '—' : (F[f] || F.txt)(v);
+  const parsujGdzie = (gdzie) => gdzie.split('&').map((c) => c.split('=').map(decodeURIComponent));
+  const wiersz = (rows, gdzie) => { const w = parsujGdzie(gdzie); return rows.find((r) => w.every(([k, v]) => String(r[k]) === v)); };
+  const dane = (id) => dash.data(id);
+  const gotowe = (...ids) => ids.every((id) => dane(id).status === 'ok');
+  const MIESIACE = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  const parsujMiesiac = (s) => new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, 15));
+  const stan = { strona: 'werdykt', sezon: 'pink', pogoda: 'pink' };
+
+  // ---------- znaczniki pojedynczych liczb ----------
+  function wypelnijLiczby() {
+    document.querySelectorAll('#dash-root .kk-v[data-source]').forEach((el) => {
+      const d = dane(el.dataset.source);
+      if (d.status !== 'ok') { el.textContent = '—'; el.classList.toggle('dash-skeleton', d.status === 'loading'); return; }
+      el.classList.remove('dash-skeleton');
+      const r = el.dataset.where ? wiersz(d.data, el.dataset.where) : d.data[+(el.dataset.row || 0)];
+      el.textContent = r ? pokaz(r[el.dataset.field], el.dataset.fmt) : '—';
+    });
+  }
+
+  // ---------- tabele ----------
+  function tabela(id, rows, kolumny) {
+    const t = document.getElementById(id);
+    const zrodlo = dane(t.dataset.source);
+    t.replaceChildren();
+    if (zrodlo.status !== 'ok') { t.classList.toggle('dash-skeleton', zrodlo.status === 'loading'); return; }
+    t.classList.remove('dash-skeleton');
+    const thead = t.createTHead().insertRow();
+    for (const k of kolumny) {
+      const th = document.createElement('th');
+      th.textContent = k.naglowek;
+      th.dataset.field = k.pole;
+      if (k.lewa) th.className = 'kk-l';
+      thead.appendChild(th);
+    }
+    const tbody = t.createTBody();
+    for (const r of rows) {
+      const tr = tbody.insertRow();
+      tr.dataset.key = r[t.dataset.rowKey];
+      for (const k of kolumny) {
+        const td = tr.insertCell();
+        if (k.lewa) td.className = 'kk-l';
+        const tekst = pokaz(r[k.pole], k.fmt);
+        if (k.pigulka) {
+          const s = document.createElement('span');
+          s.className = 'kk-pigulka'; s.dataset.ocena = tekst; s.textContent = tekst; td.appendChild(s);
+        } else td.textContent = tekst;
+        if (k.kolor) td.style.background = k.kolor(r);
+      }
+    }
+  }
+  const kolorT = (t) => {
+    if (t === null || t === undefined) return '';
+    const a = Math.round(Math.min(Math.abs(t) / 3, 1) * 45);
+    return `color-mix(in srgb, ${t >= 0 ? dash.colors[0] : dash.colors[1]} ${a}%, transparent)`;
+  };
+
+  // ---------- wykresy ----------
+  function przygotuj(el, wys) {
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+    const szer = Math.max(260, el.clientWidth);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${szer} ${wys}`)
+      .attr('preserveAspectRatio', 'xMinYMin meet').attr('role', 'img');
+    const dymek = d3.select(el).append('div').attr('class', 'kk-dymek').style('display', 'none');
+    return { svg, szer, wys, dymek };
+  }
+  function stanWykresu(el, ids) {
+    const st = ids.map((i) => dane(i).status);
+    if (st.every((s) => s === 'ok')) return true;
+    el.replaceChildren();
+    if (st.includes('error') || st.includes('connect') || st.includes('declined') || st.includes('missing')) {
+      el.classList.remove('dash-skeleton');
+      const b = document.createElement('div'); b.className = 'kk-blad'; b.textContent = 'Nie udało się wczytać'; el.appendChild(b);
+    } else el.classList.add('dash-skeleton');
+    return false;
+  }
+  function szerTekstow(svg, teksty) {
+    const t = svg.append('text').attr('class', 'kk-os');
+    let m = 0;
+    for (const s of teksty) { t.text(s); m = Math.max(m, t.node().getComputedTextLength()); }
+    t.remove();
+    return m;
+  }
+  function pokazDymek(w, el, x, y, glowa, wiersze) {
+    w.dymek.replaceChildren();
+    w.dymek.style('display', 'block');
+    w.dymek.append('div').attr('class', 'kk-d-glowa').text(glowa);
+    for (const [kolor, nazwa, wartosc] of wiersze) {
+      const r = w.dymek.append('div').attr('class', 'kk-d-w');
+      const l = r.append('span');
+      if (kolor) l.append('span').attr('class', 'kk-sw').style('background', kolor);
+      l.append('span').text(nazwa);
+      r.append('span').text(wartosc);
+    }
+    const sk = el.clientWidth / w.szer;
+    const node = w.dymek.node();
+    let lx = x * sk + 12, ly = y * sk - 10;
+    if (lx + node.offsetWidth > el.clientWidth) lx = x * sk - node.offsetWidth - 12;
+    w.dymek.style('left', `${Math.max(0, lx)}px`).style('top', `${Math.max(0, ly)}px`);
+  }
+  const ukryjDymek = (w) => w.dymek.style('display', 'none');
+
+  function siatkaY(w, sy, M, ticki, format) {
+    const g = w.svg.append('g').attr('class', 'kk-os');
+    for (const t of ticki) {
+      g.append('line').attr('x1', M.l).attr('x2', w.szer - M.r).attr('y1', sy(t)).attr('y2', sy(t))
+        .attr('stroke', 'var(--cds-chart-grid)').attr('stroke-width', 1);
+      g.append('text').attr('x', M.l - 6).attr('y', sy(t)).attr('dy', '0.32em').attr('text-anchor', 'end').text(format(t));
+    }
+  }
+
+  // Linie: serie = [{nazwa, kolor, punkty: [{x, y}]}]
+  function linie(el, { serie, czas = true, log = false, fy = d3.format('.2f'), fx, wys = 260, zero = false, xTicki }) {
+    const w = przygotuj(el, wys);
+    const pkt = serie.flatMap((s) => s.punkty.filter((p) => p.y !== null && Number.isFinite(p.y) && (!log || p.y > 0)));
+    if (!pkt.length) return;
+    let [y0, y1] = d3.extent(pkt, (p) => p.y);
+    if (zero) { y0 = Math.min(0, y0); y1 = Math.max(0, y1); }
+    const sy = (log ? d3.scaleLog() : d3.scaleLinear()).domain([y0, y1]).nice();
+    let ticki = log ? sy.ticks(4).filter((t) => /^[125]/.test(d3.format('.0e')(t))) : sy.ticks(5);
+    if (log && ticki.length > 6) ticki = ticki.filter((t) => /^1/.test(d3.format('.0e')(t)));
+    const etykiety = serie.map((s) => s.nazwa);
+    const lewy = szerTekstow(w.svg, ticki.map(fy)) + 12;
+    const prawy = szerTekstow(w.svg, etykiety) + 14;
+    const etykietyKonca = w.szer - lewy - prawy >= 260;
+    const M = { t: 10, b: 26, l: lewy, r: etykietyKonca ? prawy : 12 };
+    if (!etykietyKonca) {
+      const leg = document.createElement('div');
+      leg.className = 'kk-legenda';
+      for (const s of serie) {
+        const e = document.createElement('span'); const sw = document.createElement('span');
+        sw.className = 'kk-sw'; sw.style.background = s.kolor; e.append(sw, s.nazwa); leg.appendChild(e);
+      }
+      el.insertBefore(leg, el.firstChild);
+    }
+    const sx = (czas ? d3.scaleUtc() : d3.scaleLinear()).domain(d3.extent(pkt, (p) => p.x)).range([M.l, w.szer - M.r]);
+    sy.range([w.wys - M.b, M.t]);
+    siatkaY(w, sy, M, ticki, fy);
+    if (zero && !log) w.svg.append('line').attr('x1', M.l).attr('x2', w.szer - M.r).attr('y1', sy(0)).attr('y2', sy(0)).attr('stroke', 'var(--cds-chart-axis)');
+    const gx = w.svg.append('g').attr('class', 'kk-os');
+    const tx = xTicki || sx.ticks(Math.max(2, Math.floor((w.szer - M.l - M.r) / 80)));
+    const fxx = fx || (czas ? d3.utcFormat('%Y') : d3.format('d'));
+    for (const t of tx) gx.append('text').attr('x', sx(t)).attr('y', w.wys - 8).attr('text-anchor', 'middle').text(fxx(t));
+    const linia = d3.line().defined((p) => p.y !== null && Number.isFinite(p.y) && (!log || p.y > 0)).x((p) => sx(p.x)).y((p) => sy(p.y));
+    const konce = [];
+    for (const s of serie) {
+      w.svg.append('path').attr('d', linia(s.punkty)).attr('fill', 'none').attr('stroke', s.kolor)
+        .attr('stroke-width', s.cienka ? 1.25 : 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
+        .attr('stroke-dasharray', s.przerywana ? '4 3' : null);
+      const ost = [...s.punkty].reverse().find((p) => p.y !== null && Number.isFinite(p.y) && (!log || p.y > 0));
+      if (ost) konce.push({ y: sy(ost.y), x: sx(ost.x), s });
+    }
+    konce.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < konce.length; i++) if (konce[i].y - konce[i - 1].y < 13) konce[i].y = konce[i - 1].y + 13;
+    if (etykietyKonca) for (const k of konce) w.svg.append('text').attr('class', 'kk-et').attr('x', w.szer - M.r + 6).attr('y', k.y).attr('dy', '0.32em').text(k.s.nazwa);
+    const regula = w.svg.append('line').attr('y1', M.t).attr('y2', w.wys - M.b).attr('stroke', 'var(--cds-chart-reference)').style('display', 'none');
+    const kropki = serie.map((s) => w.svg.append('circle').attr('r', 3.5).attr('fill', s.kolor).style('display', 'none'));
+    w.svg.append('rect').attr('x', M.l).attr('y', M.t).attr('width', w.szer - M.l - M.r).attr('height', w.wys - M.t - M.b)
+      .attr('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const [mx] = d3.pointer(ev);
+        const x0 = sx.invert(mx);
+        const wiersze = [];
+        let xr = null;
+        serie.forEach((s, i) => {
+          const pts = s.punkty.filter((p) => p.y !== null && Number.isFinite(p.y));
+          if (!pts.length) { kropki[i].style('display', 'none'); return; }
+          const p = pts[d3.leastIndex(pts, (q) => Math.abs(q.x - x0))];
+          if (Math.abs(sx(p.x) - mx) > 40) { kropki[i].style('display', 'none'); return; }
+          xr = xr ?? p.x;
+          kropki[i].attr('cx', sx(p.x)).attr('cy', sy(p.y)).style('display', null);
+          wiersze.push([s.kolor, s.nazwa, fy(p.y)]);
+        });
+        if (xr === null) { ukryjDymek(w); regula.style('display', 'none'); return; }
+        regula.attr('x1', sx(xr)).attr('x2', sx(xr)).style('display', null);
+        pokazDymek(w, el, sx(xr), M.t, czas ? d3.utcFormat('%Y-%m')(xr) : `${fx ? fx(xr) : xr}`, wiersze);
+      })
+      .on('pointerleave', () => { ukryjDymek(w); regula.style('display', 'none'); kropki.forEach((k) => k.style('display', 'none')); });
+  }
+
+  // Słupki: kategorie, serie = [{nazwa, kolor, wartosci, bledy?}]
+  function slupki(el, { kategorie, serie, fy = d3.format('.1%'), wys = 240 }) {
+    const w = przygotuj(el, wys);
+    const wart = serie.flatMap((s) => s.wartosci.map((v, i) => [v - (s.bledy?.[i] ?? 0), v + (s.bledy?.[i] ?? 0)])).flat().filter(Number.isFinite);
+    const sy = d3.scaleLinear().domain([Math.min(0, d3.min(wart)), Math.max(0, d3.max(wart))]).nice();
+    const ticki = sy.ticks(5);
+    const M = { t: 10, b: 26, l: szerTekstow(w.svg, ticki.map(fy)) + 12, r: 8 };
+    sy.range([w.wys - M.b, M.t]);
+    siatkaY(w, sy, M, ticki, fy);
+    const sx = d3.scaleBand().domain(kategorie).range([M.l, w.szer - M.r]).paddingInner(0.25).paddingOuter(0.1);
+    const sx2 = d3.scaleBand().domain(serie.map((s) => s.nazwa)).range([0, sx.bandwidth()]).paddingInner(0.1);
+    const gx = w.svg.append('g').attr('class', 'kk-os');
+    for (const k of kategorie) gx.append('text').attr('x', sx(k) + sx.bandwidth() / 2).attr('y', w.wys - 8).attr('text-anchor', 'middle').text(k);
+    w.svg.append('line').attr('x1', M.l).attr('x2', w.szer - M.r).attr('y1', sy(0)).attr('y2', sy(0)).attr('stroke', 'var(--cds-chart-axis)');
+    serie.forEach((s) => {
+      s.wartosci.forEach((v, i) => {
+        if (!Number.isFinite(v)) return;
+        const x = sx(kategorie[i]) + sx2(s.nazwa), bw = Math.min(sx2.bandwidth(), 32);
+        w.svg.append('rect').attr('x', x + (sx2.bandwidth() - bw) / 2).attr('width', bw)
+          .attr('y', Math.min(sy(v), sy(0))).attr('height', Math.max(1, Math.abs(sy(v) - sy(0)))).attr('rx', 3).attr('fill', s.kolor);
+        const e = s.bledy?.[i];
+        if (Number.isFinite(e)) {
+          const cx = x + sx2.bandwidth() / 2;
+          w.svg.append('line').attr('x1', cx).attr('x2', cx).attr('y1', sy(v - e)).attr('y2', sy(v + e)).attr('stroke', 'var(--color-fg-muted)').attr('stroke-width', 1.25);
+          for (const yy of [v - e, v + e]) w.svg.append('line').attr('x1', cx - 4).attr('x2', cx + 4).attr('y1', sy(yy)).attr('y2', sy(yy)).attr('stroke', 'var(--color-fg-muted)');
+        }
+      });
+    });
+    w.svg.append('rect').attr('x', M.l).attr('y', M.t).attr('width', w.szer - M.l - M.r).attr('height', w.wys - M.t - M.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const [mx] = d3.pointer(ev);
+        const i = Math.max(0, Math.min(kategorie.length - 1, Math.floor((mx - M.l) / ((w.szer - M.l - M.r) / kategorie.length))));
+        pokazDymek(w, el, sx(kategorie[i]) + sx.bandwidth() / 2, M.t, kategorie[i], serie.map((s) => [serie.length > 1 ? s.kolor : null, s.nazwa,
+          `${Number.isFinite(s.wartosci[i]) ? fy(s.wartosci[i]) : '—'}${Number.isFinite(s.bledy?.[i]) ? ` ± ${fy(s.bledy[i])}` : ''}`]));
+      })
+      .on('pointerleave', () => ukryjDymek(w));
+  }
+
+  function rozrzut(el, { punkty, fx, fy, tytulX, tytulY, wys = 280 }) {
+    const w = przygotuj(el, wys);
+    const sx = d3.scaleLinear().domain(d3.extent(punkty, (p) => p.x)).nice();
+    const sy = d3.scaleLinear().domain(d3.extent(punkty, (p) => p.y)).nice();
+    const ty = sy.ticks(5), tx = sx.ticks(5);
+    const M = { t: 10, b: 40, l: szerTekstow(w.svg, ty.map(fy)) + 26, r: 12 };
+    sx.range([M.l, w.szer - M.r]); sy.range([w.wys - M.b, M.t]);
+    siatkaY(w, sy, M, ty, fy);
+    const gx = w.svg.append('g').attr('class', 'kk-os');
+    for (const t of tx) gx.append('text').attr('x', sx(t)).attr('y', w.wys - 24).attr('text-anchor', 'middle').text(fx(t));
+    w.svg.append('text').attr('class', 'kk-os').attr('x', (M.l + w.szer - M.r) / 2).attr('y', w.wys - 4).attr('text-anchor', 'middle').text(tytulX);
+    w.svg.append('text').attr('class', 'kk-os').attr('transform', `translate(10 ${(M.t + w.wys - M.b) / 2}) rotate(-90)`).attr('text-anchor', 'middle').text(tytulY);
+    w.svg.append('line').attr('x1', sx(0)).attr('x2', sx(0)).attr('y1', M.t).attr('y2', w.wys - M.b).attr('stroke', 'var(--cds-chart-axis)');
+    w.svg.append('line').attr('x1', M.l).attr('x2', w.szer - M.r).attr('y1', sy(0)).attr('y2', sy(0)).attr('stroke', 'var(--cds-chart-axis)');
+    w.svg.selectAll('circle.kk-p').data(punkty).join('circle').attr('class', 'kk-p').attr('cx', (p) => sx(p.x)).attr('cy', (p) => sy(p.y))
+      .attr('r', 4).attr('fill', dash.colors[0]).attr('fill-opacity', 0.75).attr('stroke', 'var(--color-panel)').attr('stroke-width', 1);
+    const krag = w.svg.append('circle').attr('r', 7).attr('fill', 'none').attr('stroke', 'var(--color-fg)').style('display', 'none');
+    const del = d3.Delaunay.from(punkty, (p) => sx(p.x), (p) => sy(p.y));
+    w.svg.append('rect').attr('x', M.l).attr('y', M.t).attr('width', w.szer - M.l - M.r).attr('height', w.wys - M.t - M.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const [mx, my] = d3.pointer(ev);
+        const p = punkty[del.find(mx, my)];
+        if (Math.hypot(sx(p.x) - mx, sy(p.y) - my) > 30) { krag.style('display', 'none'); ukryjDymek(w); return; }
+        krag.attr('cx', sx(p.x)).attr('cy', sy(p.y)).style('display', null);
+        pokazDymek(w, el, sx(p.x), sy(p.y), String(p.etykieta), [[null, tytulX, fx(p.x)], [null, tytulY, fy(p.y)]]);
+      })
+      .on('pointerleave', () => { krag.style('display', 'none'); ukryjDymek(w); });
+  }
+
+  // ---------- wybory ----------
+  function przyciski(id, opcje, klucz) {
+    const el = document.getElementById(id);
+    el.replaceChildren();
+    for (const [wartosc, etykieta] of opcje) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = etykieta; b.setAttribute('aria-pressed', String(stan[klucz] === wartosc));
+      b.addEventListener('click', () => { stan[klucz] = wartosc; rysuj(); });
+      el.appendChild(b);
+    }
+  }
+  const SZEREGI = [['pink', 'Pink Sheet'], ['coco', 'COCO.L'], ['ccf', 'CC=F']];
+
+  // ---------- strony ----------
+  const strony = {
+    werdykt() {
+      const d = dane('werdykt');
+      tabela('tab-werdykt', d.status === 'ok' ? d.data : [], [
+        { pole: 'obszar', naglowek: 'Ogniwo', lewa: true }, { pole: 'pytanie', naglowek: 'Pytanie', lewa: true },
+        { pole: 'wynik', naglowek: 'Wynik', lewa: true }, { pole: 'ocena', naglowek: 'Ocena', lewa: true, pigulka: true },
+      ]);
+    },
+    dane() {
+      const el = document.getElementById('wyk-ceny');
+      if (stanWykresu(el, ['ceny'])) {
+        const rows = dane('ceny').data.filter((r) => r.miesiac >= '1990-01');
+        const serie = [['pink', 'Pink Sheet', 0], ['coco', 'COCO.L', 1], ['ccf', 'CC=F', 2]].map(([k, n, i]) => ({
+          nazwa: n, kolor: dash.colors[i], punkty: rows.map((r) => ({ x: parsujMiesiac(r.miesiac), y: r[`${k}_indeks`] })),
+        }));
+        linie(el, { serie, log: true, fy: d3.format(',.0f') });
+      }
+      const p = dane('pokrycie');
+      tabela('tab-pokrycie', p.status === 'ok' ? p.data.filter((r) => ['pink', 'coco', 'ccf'].includes(r.klucz)) : [], [
+        { pole: 'szereg', naglowek: 'Szereg', lewa: true }, { pole: 'od', naglowek: 'Od' }, { pole: 'do', naglowek: 'Do' },
+        { pole: 'n', naglowek: 'Miesięcy', fmt: 'int' }, { pole: 'sd_mies', naglowek: 'sd', fmt: 'pct1' },
+      ]);
+    },
+    sezonowosc() {
+      przyciski('wybor-sezon', SZEREGI, 'sezon');
+      const s = dane('sezonowosc');
+      const ok = s.status === 'ok';
+      const el = document.getElementById('wyk-sezon');
+      if (stanWykresu(el, ['sezonowosc'])) {
+        const m = s.data.filter((r) => r.tabela === 'miesiace' && r.szereg === stan.sezon).sort((a, b) => a.miesiac - b.miesiac);
+        slupki(el, { kategorie: MIESIACE, serie: [{ nazwa: m[0]?.instrument ?? '', kolor: dash.colors[0], wartosci: m.map((r) => r.srednia), bledy: m.map((r) => 1.96 * r.se) }] });
+      }
+      const es = document.getElementById('wyk-spektrum');
+      if (stanWykresu(es, ['sezonowosc'])) {
+        const sp = s.data.filter((r) => r.tabela === 'spektrum' && r.szereg === stan.sezon).sort((a, b) => a.cykle_na_rok - b.cykle_na_rok);
+        linie(es, {
+          czas: false, log: true, fy: d3.format('.0e'), fx: (v) => d3.format('.1f')(v),
+          xTicki: [1, 2, 3, 4, 5, 6],
+          serie: [
+            { nazwa: 'widmo', kolor: dash.colors[0], punkty: sp.map((r) => ({ x: r.cykle_na_rok, y: r.psd })) },
+            { nazwa: 'tło 95%', kolor: 'var(--cds-chart-muted)', przerywana: true, cienka: true, punkty: sp.map((r) => ({ x: r.cykle_na_rok, y: r.tlo95 })) },
+          ],
+        });
+      }
+      tabela('tab-sezon-testy', ok ? s.data.filter((r) => r.tabela === 'testy') : [], [
+        { pole: 'nazwa', naglowek: 'Szereg', lewa: true }, { pole: 'lat', naglowek: 'Lat', fmt: 'f1' },
+        { pole: 'wald_dummy_p', naglowek: 'p Wald 12', fmt: 'p' }, { pole: 'wald_harm_p', naglowek: 'p harmoniki', fmt: 'p' },
+        { pole: 'kruskal_p', naglowek: 'p K–W', fmt: 'p' }, { pole: 'f12_p', naglowek: 'p F (12 mies.)', fmt: 'p' },
+        { pole: 'mde_miesiaca', naglowek: 'MDE miesiąca', fmt: 'pct1' }, { pole: 'oos_r2', naglowek: 'OOS R²', fmt: 'spct2' },
+        { pole: 'cw_p', naglowek: 'p CW', fmt: 'p' }, { pole: 'zm_wald_p', naglowek: 'p zmienność', fmt: 'p' },
+      ]);
+      const ez = document.getElementById('wyk-zmiennosc');
+      if (stanWykresu(ez, ['sezonowosc'])) {
+        const z = s.data.filter((r) => r.tabela === 'zmiennosc');
+        const seria = (k, n, i) => ({ nazwa: n, kolor: dash.colors[i], wartosci: MIESIACE.map((_, j) => z.find((r) => r.szereg === k && r.miesiac === j + 1)?.zmiennosc_roczna) });
+        slupki(ez, { kategorie: MIESIACE, serie: [seria('coco', 'COCO.L', 1), seria('ccf', 'CC=F', 2)], fy: d3.format('.0%'), wys: 220 });
+      }
+    },
+    pogoda() {
+      przyciski('wybor-pogoda', SZEREGI, 'pogoda');
+      const leg = document.getElementById('leg-pogoda');
+      leg.replaceChildren();
+      for (const [i, t] of [[0, 't > 0: zgodnie z hipotezą'], [1, 't < 0: wbrew hipotezie']]) {
+        const s = document.createElement('span'); const sw = document.createElement('span');
+        sw.className = 'kk-sw'; sw.style.background = dash.colors[i]; s.append(sw, t); leg.appendChild(s);
+      }
+      const p = dane('pogoda');
+      const ok = p.status === 'ok';
+      tabela('tab-pogoda', ok ? p.data.filter((r) => r.tabela === 'regresje' && r.szereg === stan.pogoda) : [], [
+        { pole: 'opis', naglowek: 'Predyktor', lewa: true }, { pole: 'h', naglowek: 'h', fmt: 'int' },
+        { pole: 'n', naglowek: 'n', fmt: 'int' }, { pole: 'b_na_sd', naglowek: 'b na 1 sd', fmt: 'spct2' },
+        { pole: 't', naglowek: 't', fmt: 's2', kolor: (r) => kolorT(r.t) }, { pole: 'p', naglowek: 'p', fmt: 'p' },
+        { pole: 'q_bh', naglowek: 'q BH', fmt: 'p' }, { pole: 'r2', naglowek: 'R²', fmt: 'pct1' },
+        { pole: 'mde_r2', naglowek: 'MDE R²', fmt: 'pct1' }, { pole: 'oos_r2', naglowek: 'OOS R²', fmt: 'spct2' },
+        { pole: 'cw_p', naglowek: 'p CW', fmt: 'p' },
+      ]);
+      tabela('tab-rownoczesne', ok ? p.data.filter((r) => r.tabela === 'rownoczesne' && r.szereg === stan.pogoda) : [], [
+        { pole: 'opis', naglowek: 'Predyktor', lewa: true }, { pole: 'b_na_sd', naglowek: 'b na 1 sd', fmt: 'spct2' },
+        { pole: 't', naglowek: 't', fmt: 's2', kolor: (r) => kolorT(r.t) }, { pole: 'q_bh', naglowek: 'q BH', fmt: 'p' },
+        { pole: 'r2', naglowek: 'R²', fmt: 'pct1' },
+      ]);
+      const ek = document.getElementById('wyk-sezonowe-kor');
+      if (stanWykresu(ek, ['pogoda'])) {
+        const k = p.data.filter((r) => r.tabela === 'sezonowe').sort((a, b) => a.miesiac_konca_okna - b.miesiac_konca_okna);
+        slupki(ek, { kategorie: MIESIACE, serie: [{ nazwa: 'ρ', kolor: dash.colors[3], wartosci: k.map((r) => r.rho) }], fy: d3.format('+.2f'), wys: 220 });
+      }
+      const es = document.getElementById('wyk-pogoda-szeregi');
+      if (stanWykresu(es, ['pogoda_szeregi'])) {
+        const r = dane('pogoda_szeregi').data;
+        linie(es, { zero: true, fy: d3.format('+.1f'), serie: [
+          { nazwa: 'opad (z)', kolor: dash.colors[0], cienka: true, punkty: r.map((w) => ({ x: parsujMiesiac(w.miesiac), y: w.opad_z })) },
+          { nazwa: 'Niño3.4 (z)', kolor: dash.colors[1], punkty: r.map((w) => ({ x: parsujMiesiac(w.miesiac), y: w.nino34_z })) },
+        ] });
+      }
+    },
+    zbiory() {
+      const z = dane('zbiory');
+      const ok = z.status === 'ok';
+      const ep = document.getElementById('wyk-produkcja');
+      if (stanWykresu(ep, ['zbiory'])) {
+        const r = z.data.filter((w) => w.tabela === 'produkcja').sort((a, b) => a.rok - b.rok);
+        linie(ep, { czas: false, fy: d3.format(',.0f'), fx: d3.format('d'), serie: [
+          { nazwa: 'WKS', kolor: dash.colors[0], punkty: r.map((w) => ({ x: w.rok, y: w.civ_kt })) },
+          { nazwa: 'Ghana', kolor: dash.colors[1], punkty: r.map((w) => ({ x: w.rok, y: w.gha_kt })) },
+        ] });
+      }
+      const er = document.getElementById('wyk-rozrzut');
+      if (stanWykresu(er, ['zbiory'])) {
+        const pk = z.data.filter((w) => w.tabela === 'punkty').map((w) => ({ x: w.wzrost_produkcji, y: w.zmiana_ceny_y1, etykieta: w.rok }));
+        rozrzut(er, { punkty: pk, fx: d3.format('+.0%'), fy: d3.format('+.0%'), tytulX: 'zmiana produkcji (log)', tytulY: 'zmiana ceny w roku Y+1 (log)' });
+      }
+      tabela('tab-produkcja-cena', ok ? z.data.filter((w) => w.tabela === 'produkcja_cena') : [], [
+        { pole: 'wariant', naglowek: 'Cena', lewa: true }, { pole: 'n', naglowek: 'Lat', fmt: 'int' },
+        { pole: 'spearman', naglowek: 'ρ', fmt: 's2' }, { pole: 'p', naglowek: 'p', fmt: 'p' },
+        { pole: 'elastycznosc', naglowek: 'Elastyczność', fmt: 's2' }, { pole: 't', naglowek: 't', fmt: 's2' },
+      ]);
+      tabela('tab-pogoda-produkcja', ok ? z.data.filter((w) => w.tabela === 'pogoda_produkcja') : [], [
+        { pole: 'wariant', naglowek: 'Rok FAO', lewa: true }, { pole: 'okno', naglowek: 'Okno', lewa: true },
+        { pole: 'n', naglowek: 'Lat', fmt: 'int' }, { pole: 'spearman', naglowek: 'ρ', fmt: 's2' },
+        { pole: 'p', naglowek: 'p', fmt: 'p' }, { pole: 'q_bh', naglowek: 'q BH', fmt: 'p' },
+        { pole: 'mde_rho', naglowek: 'MDE |ρ|', fmt: 'f2' },
+      ]);
+    },
+    strategie() {
+      const ek = document.getElementById('wyk-krzywe');
+      if (stanWykresu(ek, ['krzywe'])) {
+        const r = dane('krzywe').data;
+        const nazwy = [...new Set(r.map((w) => w.strategia))];
+        linie(ek, { zero: true, fy: d3.format('+.1f'), serie: nazwy.map((n, i) => ({
+          nazwa: n, kolor: i === 0 ? 'var(--cds-chart-muted)' : dash.colors[i - 1],
+          punkty: r.filter((w) => w.strategia === n).map((w) => ({ x: parsujMiesiac(w.miesiac), y: w.skumulowany_log })),
+        })) });
+      }
+      const s = dane('strategie');
+      tabela('tab-strategie', s.status === 'ok' ? s.data : [], [
+        { pole: 'strategia', naglowek: 'Strategia', lewa: true }, { pole: 'instrument', naglowek: 'Instrument', lewa: true },
+        { pole: 'n', naglowek: 'Miesięcy', fmt: 'int' }, { pole: 'srednia_roczna', naglowek: 'Średnio rocznie', fmt: 'spct1' },
+        { pole: 'sharpe', naglowek: 'Sharpe', fmt: 's2' }, { pole: 't', naglowek: 't', fmt: 's2' },
+        { pole: 'p', naglowek: 'p', fmt: 'p' }, { pole: 'q_bh', naglowek: 'q BH', fmt: 'p' },
+        { pole: 'kupuj_trzymaj_sharpe', naglowek: 'Sharpe kupuj i trzymaj', fmt: 's2' },
+      ]);
+    },
+    spolki() {
+      const s = dane('spolki');
+      const ok = s.status === 'ok';
+      tabela('tab-beta', ok ? s.data.filter((r) => r.tabela === 'beta') : [], [
+        { pole: 'spolka', naglowek: 'Spółka', lewa: true }, { pole: 'n', naglowek: 'Miesięcy', fmt: 'int' },
+        { pole: 'beta', naglowek: 'Beta', fmt: 's2' }, { pole: 't', naglowek: 't', fmt: 's2' },
+        { pole: 'p', naglowek: 'p', fmt: 'p' },
+      ]);
+      const en = document.getElementById('wyk-nadwyzki');
+      if (stanWykresu(en, ['spolki'])) {
+        const r = s.data.filter((w) => w.tabela === 'krzywe');
+        const nazwy = [...new Set(r.map((w) => w.spolka))];
+        linie(en, { zero: true, fy: d3.format('+.1f'), serie: nazwy.map((n, i) => ({
+          nazwa: n, kolor: dash.colors[i], punkty: r.filter((w) => w.spolka === n).map((w) => ({ x: parsujMiesiac(w.miesiac), y: w.skumulowana_nadwyzka_log })),
+        })) });
+      }
+      tabela('tab-predykcja', ok ? s.data.filter((r) => r.tabela === 'predykcja') : [], [
+        { pole: 'spolka', naglowek: 'Spółka', lewa: true }, { pole: 'k', naglowek: 'k', fmt: 'int' },
+        { pole: 'h', naglowek: 'h', fmt: 'int' }, { pole: 'n', naglowek: 'n', fmt: 'int' },
+        { pole: 'b_na_sd', naglowek: 'b na 1 sd', fmt: 'spct2' }, { pole: 't', naglowek: 't', fmt: 's2' },
+        { pole: 'p', naglowek: 'p', fmt: 'p' }, { pole: 'q_bh', naglowek: 'q BH', fmt: 'p' },
+      ]);
+    },
+    enso() {
+      const z = dane('zdarzenia');
+      const ok = z.status === 'ok';
+      const ec = document.getElementById('wyk-car');
+      if (stanWykresu(ec, ['zdarzenia'])) {
+        const r = z.data.filter((w) => w.tabela === 'sciezka');
+        const nazwy = [...new Set(r.map((w) => w.instrument))];
+        linie(ec, { czas: false, zero: true, fy: d3.format('+.1%'), fx: d3.format('+d'), xTicki: [-10, -5, 0, 5, 10], serie: nazwy.map((n, i) => ({
+          nazwa: n, kolor: dash.colors[i], punkty: r.filter((w) => w.instrument === n).map((w) => ({ x: w.dzien, y: w.car })),
+        })) });
+      }
+      tabela('tab-enso-testy', ok ? z.data.filter((r) => r.tabela === 'testy') : [], [
+        { pole: 'instrument', naglowek: 'Instrument', lewa: true }, { pole: 'okno', naglowek: 'Okno', lewa: true },
+        { pole: 'n', naglowek: 'n', fmt: 'int' }, { pole: 'srednia', naglowek: 'Średni CAR', fmt: 'spct2' },
+        { pole: 't', naglowek: 't', fmt: 's2' }, { pole: 'p', naglowek: 'p', fmt: 'p' },
+        { pole: 'dodatnich', naglowek: 'Dodatnich', fmt: 'int' }, { pole: 'p_znakow', naglowek: 'p znaków', fmt: 'p' },
+        { pole: 'mde', naglowek: 'MDE', fmt: 'pct1' },
+      ]);
+      tabela('tab-enso-lista', ok ? z.data.filter((r) => r.tabela === 'lista') : [], [
+        { pole: 'data', naglowek: 'Data', lewa: true }, { pole: 'status', naglowek: 'Nowy status', lewa: true },
+        { pole: 'kierunek', naglowek: 'Kierunek', fmt: 'sint' },
+      ]);
+    },
+    metoda() {},
+  };
+
+  function rysuj() {
+    document.querySelectorAll('#dash-root .kk-zakladki button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.strona === stan.strona)));
+    document.querySelectorAll('#dash-root .kk-strona').forEach((s) => { s.hidden = s.id !== stan.strona; });
+    wypelnijLiczby();
+    strony[stan.strona]();
+  }
+  document.querySelectorAll('#dash-root .kk-zakladki button').forEach((b) => b.addEventListener('click', () => {
+    stan.strona = b.dataset.strona; dash.setLink(b.dataset.strona); rysuj();
+  }));
+  const zLinku = location.hash.slice(1);
+  if (strony[zLinku]) stan.strona = zLinku;
+  dash.onData(rysuj);
+})();
+</script>
+
+</div>
+</body>
+</html>

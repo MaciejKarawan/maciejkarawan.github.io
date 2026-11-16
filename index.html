@@ -40,9 +40,10 @@
   .lede { max-width: var(--measure); font-size: 1.25rem; color: var(--ink-soft); margin: 1rem 0 0; }
   .lede a { white-space: nowrap; }
   figure.paths { margin: 2.5rem 0 0; }
-  canvas { display: block; width: 100%; height: clamp(220px, 34vw, 380px); border-top: 1px solid var(--grid); border-bottom: 1px solid var(--grid); }
+  canvas { display: block; image-rendering: pixelated; width: 100%; height: clamp(220px, 34vw, 380px); border-top: 1px solid var(--grid); border-bottom: 1px solid var(--grid); }
   figcaption { font-size: 0.9rem; color: var(--ink-soft); margin-top: 0.6rem; max-width: var(--measure); }
-  figcaption .swatch { display: inline-block; width: 1.2em; height: 2px; vertical-align: middle; background: var(--realised); margin-right: 0.3em; }
+  figcaption .readout { display: block; margin-top: 0.35rem; font-variant-numeric: tabular-nums; color: var(--ink); }
+  #ising { touch-action: pan-y; cursor: crosshair; }
   .redraw { font: inherit; color: var(--path); background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 0.18em; cursor: pointer; }
   .redraw:hover { color: var(--realised); }
   .redraw:focus-visible { outline: 2px solid var(--realised); outline-offset: 3px; }
@@ -104,9 +105,10 @@
   <p class="lede">Mathematician working on stochastic modelling: Monte Carlo methods, MCMC optimisation, and the pricing and hedging of derivatives. Below are selected projects, each with code and a write-up on <a href="https://github.com/MaciejKarawan">GitHub</a>. You can also find me on <a href="https://www.linkedin.com/in/maciej-karawan">LinkedIn</a>.</p>
 
   <figure class="paths">
-    <canvas id="paths" aria-label="Fan of simulated geometric Brownian motion paths with one highlighted path" role="img"></canvas>
+    <canvas id="ising" role="img" aria-label="Animated two-dimensional Ising model: blue and light spin domains grow, merge and melt as the temperature changes"></canvas>
     <figcaption>
-      400 geometric Brownian motion paths over one trading year, using the WIG20 calibration from the hedging project below (σ = 26.56%, μ = 2.65%). <span class="swatch" aria-hidden="true"></span>One path is highlighted. <button class="redraw" id="redraw" type="button">Draw new paths</button>
+      The heat-bath Gibbs sampler from my thesis, run here on a two-dimensional Ising lattice. Temperature and an external field run through a slow cycle: clusters at the critical point, a quench into growing domains, a travelling field that writes stripes or rings, then melting. Scrolling heats the lattice, and the cursor acts as a local magnetic field. <button class="redraw" id="reset" type="button">Reset spins</button>
+      <span class="readout" id="readout" aria-live="off"></span>
     </figcaption>
   </figure>
 </header>
@@ -327,77 +329,148 @@
 
 <script>
 (function () {
-  var canvas = document.getElementById('paths');
+  var canvas = document.getElementById('ising');
   var ctx = canvas.getContext('2d');
+  var readout = document.getElementById('readout');
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var N = 400, STEPS = 252, S0 = 2266.92, MU = 0.0265, SIGMA = 0.2656, DT = 1 / 252;
-  var raf = null;
 
-  function gauss() {
-    var u = 1 - Math.random(), v = Math.random();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-  }
-  function simulate() {
-    var paths = [], drift = (MU - 0.5 * SIGMA * SIGMA) * DT, vol = SIGMA * Math.sqrt(DT);
-    for (var i = 0; i < N; i++) {
-      var p = new Float32Array(STEPS + 1); p[0] = S0;
-      for (var t = 1; t <= STEPS; t++) p[t] = p[t - 1] * Math.exp(drift + vol * gauss());
-      paths.push(p);
-    }
-    return paths;
-  }
+  var BETA_C = 0.5 * Math.log(1 + Math.SQRT2);   // critical inverse temperature, J = 1
+  var CELL = 5;                                   // CSS pixels per spin (3 on narrow screens)
+  var cols, rows, n, spin, field, img, off, offCtx, w, h;
+  var t0 = performance.now() - 8000, last = performance.now(), heat = 0, lastScroll = window.scrollY;
+  var pointer = null, visible = true, raf = null, lastReadout = 0;
+
   function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function rgb(hex) { var v = parseInt(hex.slice(1), 16); return [v >> 16, (v >> 8) & 255, v & 255]; }
+  var UP = rgb(css('--path') || '#3D6B99'), DOWN = rgb(css('--paper') || '#F3F5F7'), WALL = rgb(css('--realised') || '#B23A48');
 
-  function draw() {
-    if (raf) cancelAnimationFrame(raf);
+  function setup() {
     var dpr = window.devicePixelRatio || 1;
-    var w = canvas.clientWidth, h = canvas.clientHeight;
-    canvas.width = w * dpr; canvas.height = h * dpr;
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    CELL = w < 640 ? 3 : 5;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cols = Math.round(w / CELL); rows = Math.round(h / CELL);
+    n = cols * rows;
+    spin = new Int8Array(n); field = new Float32Array(n);
+    randomise();
+    off = document.createElement('canvas'); off.width = cols; off.height = rows;
+    offCtx = off.getContext('2d'); img = offCtx.createImageData(cols, rows);
+  }
+  function randomise() { for (var i = 0; i < n; i++) spin[i] = Math.random() < 0.5 ? 1 : -1; }
 
-    var paths = simulate();
-    var lo = Infinity, hi = -Infinity;
-    paths.forEach(function (p) { for (var t = 0; t <= STEPS; t++) { if (p[t] < lo) lo = p[t]; if (p[t] > hi) hi = p[t]; } });
-    lo = Math.max(lo, S0 * 0.35); hi = Math.min(hi, S0 * 2.4);
-    var pad = 12;
-    function x(t) { return (t / STEPS) * w; }
-    function y(v) { v = Math.min(Math.max(v, lo), hi); return pad + (1 - (Math.log(v) - Math.log(lo)) / (Math.log(hi) - Math.log(lo))) * (h - 2 * pad); }
+  // A slow cycle of scenes: near-critical clusters, a quench into growing domains, a travelling
+  // field that writes stripes or rings, coarsening once the field switches off, then melting.
+  // Keyframes: [seconds, beta / beta_c, field amplitude].
+  var KEYS = [[0, 1.00, 0], [10, 1.01, 0], [13, 1.65, 0], [22, 1.6, 0], [25, 1.25, 1.1], [35, 1.3, 1.1],
+              [37, 1.5, 0], [46, 1.5, 0], [50, 0.62, 0], [55, 0.65, 0], [60, 1.00, 0]];
+  var CYCLE = 60, shape = null, shapeCycle = -1;
+  function ease(a, b, u) { return a + (b - a) * (0.5 - 0.5 * Math.cos(Math.PI * u)); }
+  function scene(sec) {
+    var c = Math.floor(sec / CYCLE), t = sec - c * CYCLE, k = 0;
+    while (k < KEYS.length - 2 && KEYS[k + 1][0] <= t) k++;
+    var a = KEYS[k], b = KEYS[k + 1], u = (t - a[0]) / (b[0] - a[0]);
+    if (c !== shapeCycle) {                      // new geometry for the field every cycle
+      shapeCycle = c;
+      shape = c % 2 === 1 ? { rings: true } : { rings: false, angle: Math.random() * Math.PI };
+    }
+    return { beta: BETA_C * ease(a[1], b[1], u) * Math.exp(-heat), amp: ease(a[2], b[2], u), t: t };
+  }
+  function fieldAt(x, y, sc) {
+    var lambda = 26, phase = 2 * Math.PI * sc.t / 5;
+    var q = shape.rings
+      ? Math.sqrt((x - cols / 2) * (x - cols / 2) + (y - rows / 2) * (y - rows / 2))
+      : x * Math.cos(shape.angle) + y * Math.sin(shape.angle);
+    return sc.amp * Math.sin(2 * Math.PI * q / lambda - phase);
+  }
 
-    var pathColor = css('--path'), red = css('--realised'), grid = css('--grid');
-    var highlight = paths[Math.floor(Math.random() * N)];
-
-    function frame(upTo) {
-      ctx.clearRect(0, 0, w, h);
-      ctx.strokeStyle = grid; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(0, y(S0)); ctx.lineTo(w, y(S0)); ctx.stroke();
-      ctx.strokeStyle = pathColor; ctx.globalAlpha = 0.09; ctx.lineWidth = 1;
-      for (var i = 0; i < N; i++) {
-        var p = paths[i]; ctx.beginPath(); ctx.moveTo(0, y(p[0]));
-        for (var t = 1; t <= upTo; t++) ctx.lineTo(x(t), y(p[t]));
-        ctx.stroke();
+  function sweep(sc) {
+    var beta = sc.beta, wave = sc.amp > 0.02;
+    var r2 = 0, px = 0, py = 0, has = pointer !== null;
+    if (has) { px = pointer.x / CELL; py = pointer.y / CELL; r2 = Math.pow(Math.max(6, cols / 22), 2); }
+    if (wave) for (var yy = 0; yy < rows; yy++) for (var xx = 0; xx < cols; xx++) field[yy * cols + xx] = fieldAt(xx, yy, sc);
+    for (var parity = 0; parity < 2; parity++) {
+      for (var y = 0; y < rows; y++) {
+        var up = ((y - 1 + rows) % rows) * cols, dn = ((y + 1) % rows) * cols, row = y * cols;
+        for (var x = (y + parity) & 1; x < cols; x += 2) {
+          var l = x === 0 ? cols - 1 : x - 1, r = x === cols - 1 ? 0 : x + 1;
+          var sum = spin[row + l] + spin[row + r] + spin[up + x] + spin[dn + x];
+          var hl = wave ? field[row + x] : 0;
+          if (has) { var dx = x - px, dy = y - py, d2 = dx * dx + dy * dy; if (d2 < 9 * r2) hl += 1.6 * Math.exp(-d2 / r2); }
+          var p = 1 / (1 + Math.exp(-2 * beta * (sum + hl)));
+          spin[row + x] = Math.random() < p ? 1 : -1;
+        }
       }
-      ctx.globalAlpha = 1; ctx.strokeStyle = red; ctx.lineWidth = 1.8;
-      ctx.beginPath(); ctx.moveTo(0, y(highlight[0]));
-      for (var s = 1; s <= upTo; s++) ctx.lineTo(x(s), y(highlight[s]));
-      ctx.stroke();
     }
+  }
 
-    if (reduce) { frame(STEPS); return; }
-    var start = null, duration = 1600;
-    function tick(ts) {
-      if (start === null) start = ts;
-      var k = Math.min(1, (ts - start) / duration);
-      var eased = 1 - Math.pow(1 - k, 3);
-      frame(Math.max(1, Math.round(eased * STEPS)));
-      if (k < 1) raf = requestAnimationFrame(tick);
+  function render() {
+    var d = img.data, m = 0;
+    for (var y = 0; y < rows; y++) {
+      var up = ((y - 1 + rows) % rows) * cols, dn = ((y + 1) % rows) * cols, row = y * cols;
+      for (var x = 0; x < cols; x++) {
+        var i = row + x, s = spin[i]; m += s;
+        var l = x === 0 ? cols - 1 : x - 1, r = x === cols - 1 ? 0 : x + 1;
+        var agree = (spin[row + l] === s) + (spin[row + r] === s) + (spin[up + x] === s) + (spin[dn + x] === s);
+        var c = s > 0 ? UP : DOWN, k = i * 4;
+        if (s > 0 && agree === 0) c = WALL;          // isolated up-spins: thermal noise in red
+        d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2]; d[k + 3] = s > 0 ? (agree >= 3 ? 255 : 200) : 255;
+      }
     }
+    offCtx.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(off, 0, 0, w, h);
+    return m / n;
+  }
+
+  function report(beta, mag, amp) {
+    var ratio = beta / BETA_C;
+    var phase = ratio > 1.06 ? 'ordered' : ratio < 0.94 ? 'disordered' : 'near critical';
+    readout.innerHTML = 'β = ' + beta.toFixed(3) + ', β/β<sub>c</sub> = ' + ratio.toFixed(2) + ' (' + phase + '), magnetisation ' +
+      (mag >= 0 ? '+' : '−') + Math.abs(mag).toFixed(2) + (amp > 0.05 ? ', travelling field on' : '');
+  }
+
+  function tick(now) {
+    raf = null;
+    if (!visible) return;
+    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+    heat *= Math.exp(-dt / 1.6);
+    var sc = scene((now - t0) / 1000);
+    sweep(sc); sweep(sc);
+    var mag = render();
+    if (now - lastReadout > 250) { report(sc.beta, mag, sc.amp); lastReadout = now; }
     raf = requestAnimationFrame(tick);
   }
+  function start() { if (!raf && !reduce) { last = performance.now(); raf = requestAnimationFrame(tick); } }
 
-  document.getElementById('redraw').addEventListener('click', draw);
+  function still() {
+    // Reduced motion: one equilibrated snapshot slightly below the critical temperature.
+    var sc = { beta: BETA_C * 1.04, amp: 0, t: 0 };
+    for (var k = 0; k < 400; k++) sweep(sc);
+    report(sc.beta, render(), 0);
+  }
+
+  window.addEventListener('scroll', function () {
+    var y = window.scrollY; heat = Math.min(1.4, heat + Math.abs(y - lastScroll) / 900); lastScroll = y;
+  }, { passive: true });
+  canvas.addEventListener('pointermove', function (e) {
+    var b = canvas.getBoundingClientRect(); pointer = { x: e.clientX - b.left, y: e.clientY - b.top };
+  });
+  canvas.addEventListener('pointerleave', function () { pointer = null; });
+  document.getElementById('reset').addEventListener('click', function () { randomise(); if (reduce) still(); });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) { visible = es[0].isIntersecting; if (visible) start(); }).observe(canvas);
+  }
+  document.addEventListener('visibilitychange', function () { visible = !document.hidden; if (visible) start(); });
   var resizeTimer;
-  window.addEventListener('resize', function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 200); });
-  draw();
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { setup(); if (reduce) still(); }, 200);
+  });
+
+  setup();
+  if (reduce) still(); else start();
 })();
 </script>
 </body>

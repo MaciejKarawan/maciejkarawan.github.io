@@ -74,6 +74,16 @@
   .small-list li:last-child { border-bottom: 0; }
   .small-list strong { font-family: "Schibsted Grotesk", system-ui, sans-serif; font-weight: 600; }
 
+
+  /* Experience */
+  .cv { list-style: none; padding: 0; margin: 1.2rem 0 0; max-width: 52rem; }
+  .cv li { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 1.5rem; padding: 0.9rem 0; border-bottom: 1px solid var(--grid); }
+  .cv li:last-child { border-bottom: 0; }
+  .cv .when { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .cv strong { font-family: "Schibsted Grotesk", system-ui, sans-serif; font-weight: 600; }
+  .cv p { margin: 0.2rem 0 0; color: var(--ink-soft); }
+  @media (max-width: 40rem) { .cv li { grid-template-columns: 1fr; gap: 0.2rem; } }
+
   footer.wrap { padding-bottom: 3rem; margin-top: 4rem; color: var(--ink-soft); font-size: 0.95rem; }
   footer p { margin: 0; padding-top: 2rem; border-top: 1px solid var(--grid); }
 
@@ -99,6 +109,16 @@
 </header>
 
 <main class="wrap">
+
+  <section aria-labelledby="experience">
+    <h2 id="experience">Experience and education</h2>
+    <ul class="cv">
+      <li><span class="when">Aug–Oct 2026</span><div><strong>Quant Researcher</strong>, Giulio Sp. z o.o.<p>Built a tool for falsifying quantitative hypotheses.</p></div></li>
+      <li><span class="when">Since May 2024</span><div><strong>Senior Game Designer &amp; Mathematician</strong>, Wazdan<p>Slot game mathematics: RTP and volatility modelling (variance, skewness, kurtosis) and paytable design.</p></div></li>
+      <li><span class="when">Since 2021</span><div><strong>Mathematics tutor</strong></div></li>
+      <li><span class="when">2026</span><div><strong>MSc in Mathematics</strong>, University of Wrocław</div></li>
+    </ul>
+  </section>
 
   <section aria-labelledby="research">
     <h2 id="research">Research projects</h2>
@@ -168,13 +188,13 @@
     <article class="project">
       <div>
         <h3>Quanto option on gold with a PLN payout</h3>
-        <p>Pricing and delta hedging of a call on XAU/USD paid in Polish złoty, under correlated GBMs simulated with a Cholesky factorisation. The analysis is run in two equivalent formulations, (USD/PLN, gold in USD) and (USD/PLN, gold in PLN), and compares the two through calibration, hedging P&amp;L and sensitivity heatmaps.</p>
-        <p class="meta">Financial Engineering I, 2025.</p>
-        <p class="links"><a href="https://github.com/MaciejKarawan/Quantio-Options">Code</a></p>
+        <p>Pricing and delta hedging of a call on XAU/USD paid in Polish złoty, under correlated GBMs. Closed-form prices are derived in two formulations, (USD/PLN, gold in USD) and (USD/PLN, gold in PLN), and shown to be identical when gold in PLN is parametrised consistently from the SDEs. A naive calibration of the product series inflates its volatility and flips the sign of the correlation, which raises the price from 8.90 to 13.46.</p>
+        <p class="meta">With Jakub Kozłowski and Wiktor Trykowski. Financial Engineering I, 2025.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/Quantio-Options">Code</a><a href="https://github.com/MaciejKarawan/Quantio-Options/blob/main/reports/Quanto_report_Karawan_Kozlowski_Trykowski.pdf">Report (PL)</a></p>
       </div>
       <div class="aside">
-        <div class="figure-num">ρ ≈ −0.33</div>
-        <p class="cap">calibrated correlation between gold and USD/PLN, which sets the sign of the quanto drift correction</p>
+        <div class="figure-num">8.90 vs 13.46</div>
+        <p class="cap">the same option priced with consistent vs. naive calibration of gold in PLN</p>
       </div>
     </article>
 
@@ -214,6 +234,23 @@
       <div class="aside">
         <img src="assets/prng.png" alt="Histograms of generalised LCG output for increasing sample sizes" loading="lazy" width="720" height="459">
         <p class="cap">Generalised LCG output for growing sample sizes.</p>
+      </div>
+    </article>
+  </section>
+
+  <section aria-labelledby="timeseries">
+    <h2 id="timeseries">Time series</h2>
+
+    <article class="project">
+      <div>
+        <h3>Forecasting Australian beer production</h3>
+        <p>Quarterly production data (1990–2010) cleaned of three historically explained outliers, decomposed with four competing trend estimators, and forecast with AR(4) on residuals, SARIMA(0,0,0)(2,1,0)[4], and Amazon's pretrained Chronos model applied zero-shot. The forecasts were checked against real data for 2008–2023: SARIMA was the most accurate, ahead of Chronos, with the decomposition-based AR model clearly too optimistic.</p>
+        <p class="meta">With Filip Gaj. Python, statsmodels, Chronos, 2025.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/TS-project">Code</a><a href="https://github.com/MaciejKarawan/TS-project/blob/main/reports/Produkcja_piwa_w_Australii.pdf">Report (PL)</a></p>
+      </div>
+      <div class="aside">
+        <img src="assets/ts.png" alt="Yearly beer production 2008–2023: actual values against SARIMA, AR(4) and Chronos forecasts" loading="lazy" width="720" height="447">
+        <p class="cap">Actual production (black) vs. SARIMA, AR(4) and Chronos forecasts.</p>
       </div>
     </article>
   </section>

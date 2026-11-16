@@ -26,6 +26,7 @@
     color: var(--ink);
     font: 400 1.0625rem/1.65 "Source Serif 4", Georgia, serif;
   }
+  sub, sup { line-height: 0; }
   a { color: var(--path); text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
   a:hover { color: var(--realised); }
   a:focus-visible { outline: 2px solid var(--realised); outline-offset: 3px; border-radius: 2px; }
@@ -98,7 +99,7 @@
 
 <header class="wrap">
   <h1>Maciej Karawan</h1>
-  <p class="lede">Mathematician working on stochastic modelling: Monte Carlo methods, MCMC optimisation, and the pricing and hedging of derivatives. Below are selected projects, each with code and a write-up on <a href="https://github.com/MaciejKarawan">GitHub</a>.</p>
+  <p class="lede">Mathematician working on stochastic modelling: Monte Carlo methods, MCMC optimisation, and the pricing and hedging of derivatives. Below are selected projects, each with code and a write-up on <a href="https://github.com/MaciejKarawan">GitHub</a>. You can also find me on <a href="https://www.linkedin.com/in/maciej-karawan">LinkedIn</a>.</p>
 
   <figure class="paths">
     <canvas id="paths" aria-label="Fan of simulated geometric Brownian motion paths with one highlighted path" role="img"></canvas>
@@ -116,7 +117,8 @@
       <li><span class="when">Aug–Oct 2026</span><div><strong>Quant Researcher</strong>, Giulio Sp. z o.o.<p>Built a tool for falsifying quantitative hypotheses.</p></div></li>
       <li><span class="when">Since May 2024</span><div><strong>Senior Game Designer &amp; Mathematician</strong>, Wazdan<p>Slot game mathematics: RTP and volatility modelling (variance, skewness, kurtosis) and paytable design.</p></div></li>
       <li><span class="when">Since 2021</span><div><strong>Mathematics tutor</strong></div></li>
-      <li><span class="when">2026</span><div><strong>MSc in Mathematics</strong>, University of Wrocław</div></li>
+      <li><span class="when">2-month internship</span><div><strong>Research Assistant</strong>, University of Sharjah, UAE</div></li>
+      <li><span class="when">2026</span><div><strong>MSc in Mathematics</strong> (Financial and Actuarial Mathematics), University of Wrocław<p>Thesis: Perfect simulation via strong stationary duality for Möbius monotone Markov chains.</p></div></li>
     </ul>
   </section>
 
@@ -125,15 +127,29 @@
 
     <article class="project">
       <div>
+        <h3>Master's thesis: perfect simulation for Möbius monotone Markov chains</h3>
+        <p>An algorithm that draws <em>exact</em> samples from a Markov chain's stationary distribution, with no burn-in, by turning Diaconis–Fill strong stationary duality into something implementable. For chains whose time reversal is Möbius monotone, the dual is built as a Doob transform of a Siegmund dual, and the coupled process needs only the original kernel.</p>
+        <p>For the heat-bath Gibbs sampler of the Ising model on a cycle, I proved Möbius monotonicity, derived the Siegmund dual explicitly and bounded the running time by N·H<sub>N</sub> ≤ E[T*] ≤ e<sup>4β</sup>·N·H<sub>N</sub>. Monte Carlo experiments show that coupling from the past costs a constant ≈ 2.85 times more, close to the theoretical 2/ln 2.</p>
+        <p class="meta">Supervisor: dr hab. Paweł Lorek, prof. UWr. University of Wrocław, 2026. Python, exact recursions with dihedral-symmetry reduction.</p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/Perfect-Simulation-Monotone-Markov-Chains">Code</a><a href="https://github.com/MaciejKarawan/Perfect-Simulation-Monotone-Markov-Chains/blob/main/thesis/Karawan_2026_Perfect_simulation_SSD_Mobius_monotone.pdf">Thesis (PDF)</a></p>
+      </div>
+      <div class="aside">
+        <img src="assets/thesis.png" alt="Ratio of CFTP work to SSD absorption time across chain sizes and temperatures, flat near 2.85" loading="lazy" width="720" height="445">
+        <p class="cap">Cost of CFTP relative to the new algorithm, across N and β.</p>
+      </div>
+    </article>
+
+    <article class="project">
+      <div>
         <h3>Predicting mWIG40 index revisions</h3>
         <p>Reconstructed the Warsaw Stock Exchange's mid-cap index rules from GPW Benchmark regulations and 19 published revisions, then ran the same pipeline forward to forecast the next quarterly revision.</p>
         <p>I also tested whether buying likely index entrants early is a tradable strategy, with a pre-registered protocol: cluster bootstrap, permutation tests with a deflated threshold, a total-return benchmark, a regime split and a survivorship audit. The test found a look-ahead leak in the earlier backtest that had produced the headline result. After the fix the trading signal fails, while the score remains a significant predictor of which companies will enter the index.</p>
         <p class="meta">Python, pandas, PDF scraping, bootstrap and permutation inference</p>
-        <p class="links"><a href="https://github.com/MaciejKarawan/mWIG40-Prediction">Code and reports</a></p>
+        <p class="links"><a href="https://github.com/MaciejKarawan/mWIG40-Prediction">Code and reports</a><a href="https://github.com/MaciejKarawan/mWIG40-Prediction/blob/main/reports/mwig40_replication_report.pdf">Report (PL)</a></p>
       </div>
       <div class="aside">
-        <div class="figure-num">36 / 40</div>
-        <p class="cap">mWIG40 constituents reproduced for the March 2025 revision</p>
+        <div class="figure-num">40 / 40</div>
+        <p class="cap">mWIG40 constituents reproduced for the March 2026 revision</p>
         <div class="figure-pair">
           <div class="figure-num">1,700+</div>
           <p class="cap">configurations logged against the multiple-testing budget before the confirmatory test</p>
@@ -266,7 +282,7 @@
 </main>
 
 <footer class="wrap">
-  <p>Maciej Karawan. Code for every project is on <a href="https://github.com/MaciejKarawan">github.com/MaciejKarawan</a>. Full reports are written in Polish.</p>
+  <p>Maciej Karawan. Find me on <a href="https://www.linkedin.com/in/maciej-karawan">LinkedIn</a> and <a href="https://github.com/MaciejKarawan">GitHub</a>. Course reports are written in Polish; the thesis is in English.</p>
 </footer>
 
 <script>

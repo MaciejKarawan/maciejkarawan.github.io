@@ -39,11 +39,15 @@
   h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); font-weight: 700; letter-spacing: -0.02em; }
   .lede { max-width: var(--measure); font-size: 1.25rem; color: var(--ink-soft); margin: 1rem 0 0; }
   .lede a { white-space: nowrap; }
-  figure.paths { margin: 2.5rem 0 0; }
-  canvas { display: block; image-rendering: pixelated; width: 100%; height: clamp(220px, 34vw, 380px); border-top: 1px solid var(--grid); border-bottom: 1px solid var(--grid); }
-  figcaption { font-size: 0.9rem; color: var(--ink-soft); margin-top: 0.6rem; max-width: var(--measure); }
-  figcaption .readout { display: block; margin-top: 0.35rem; font-variant-numeric: tabular-nums; color: var(--ink); }
-  #ising { touch-action: pan-y; cursor: crosshair; }
+  #carpet { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;
+    --band: 0px;
+    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,.5), rgba(0,0,0,0) var(--band), rgba(0,0,0,0) calc(100% - var(--band)), rgba(0,0,0,.5));
+            mask-image: linear-gradient(to right, rgba(0,0,0,.5), rgba(0,0,0,0) var(--band), rgba(0,0,0,0) calc(100% - var(--band)), rgba(0,0,0,.5)); }
+  @media (max-width: 1199px) { #carpet, .sim-note { display: none; } }
+  .sim-note { font-size: 0.9rem; color: var(--ink-soft); margin: 2rem 0 0; max-width: var(--measure); padding-left: 0.9rem; border-left: 2px solid var(--grid); }
+  .sim-note p { margin: 0; }
+  .sim-note .readout { display: block; margin-top: 0.35rem; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .sim-note .redraw + .redraw { margin-left: 1rem; }
   .redraw { font: inherit; color: var(--path); background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 0.18em; cursor: pointer; }
   .redraw:hover { color: var(--realised); }
   .redraw:focus-visible { outline: 2px solid var(--realised); outline-offset: 3px; }
@@ -99,18 +103,17 @@
 </style>
 </head>
 <body>
+<canvas id="carpet" aria-hidden="true"></canvas>
 
 <header class="wrap">
   <h1>Maciej Karawan</h1>
   <p class="lede">Mathematician working on stochastic modelling: Monte Carlo methods, MCMC optimisation, and the pricing and hedging of derivatives. Below are selected projects, each with code and a write-up on <a href="https://github.com/MaciejKarawan">GitHub</a>. You can also find me on <a href="https://www.linkedin.com/in/maciej-karawan">LinkedIn</a>.</p>
 
-  <figure class="paths">
-    <canvas id="ising" role="img" aria-label="Animated two-dimensional Ising model: blue and light spin domains grow, merge and melt as the temperature changes"></canvas>
-    <figcaption>
-      The heat-bath Gibbs sampler from my thesis, run here on a two-dimensional Ising lattice. Temperature and an external field run through a slow cycle: clusters at the critical point, a quench into growing domains, a travelling field that writes stripes or rings, then melting. Scrolling heats the lattice, and the cursor acts as a local magnetic field. <button class="redraw" id="reset" type="button">Reset spins</button>
-      <span class="readout" id="readout" aria-live="off"></span>
-    </figcaption>
-  </figure>
+  <div class="sim-note">
+    <p>The side bands run a live Ising model on a Sierpiński carpet, a fractal graph of dimension log 8 / log 3 &asymp; 1.89, sampled with the heat-bath Gibbs sampler from my thesis. The temperature cycles, so domains form, coarsen, take over and melt. Scrolling heats the lattice, and the cursor acts as a local magnetic field.</p>
+    <span class="readout" id="readout" aria-live="off"></span>
+    <button class="redraw" id="pause" type="button" aria-pressed="false">Pause animation</button><button class="redraw" id="reset" type="button">Reset spins</button>
+  </div>
 </header>
 
 <main class="wrap">
@@ -329,148 +332,162 @@
 
 <script>
 (function () {
-  var canvas = document.getElementById('ising');
+  var canvas = document.getElementById('carpet');
   var ctx = canvas.getContext('2d');
   var readout = document.getElementById('readout');
+  var pauseBtn = document.getElementById('pause');
+  var anchor = document.querySelector('header.wrap');
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var wide = window.matchMedia('(min-width: 1200px)');
 
-  var BETA_C = 0.5 * Math.log(1 + Math.SQRT2);   // critical inverse temperature, J = 1
-  var CELL = 5;                                   // CSS pixels per spin (3 on narrow screens)
-  var cols, rows, n, spin, field, img, off, offCtx, w, h;
-  var t0 = performance.now() - 8000, last = performance.now(), heat = 0, lastScroll = window.scrollY;
-  var pointer = null, visible = true, raf = null, lastReadout = 0;
+  var UP = [61, 107, 153], DOWN = [243, 245, 247], HOLE = [213, 220, 227];
+  var bands = [], L = 0, S = 0, band = 0, w = 0, h = 0, built = false;
+  var t0 = performance.now() - 46000, last = t0, heat = 0, lastScroll = window.scrollY;
+  var pointer = null, paused = reduce, raf = null, lastReadout = 0;
+  var pUp = new Float32Array(9);                   // heat-bath P(+1) for neighbour sums -4..4
 
-  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-  function rgb(hex) { var v = parseInt(hex.slice(1), 16); return [v >> 16, (v >> 8) & 255, v & 255]; }
-  var UP = rgb(css('--path') || '#3D6B99'), DOWN = rgb(css('--paper') || '#F3F5F7'), WALL = rgb(css('--realised') || '#B23A48');
+  function carpet(k) {                             // Sierpinski carpet SC(3,1), level k
+    var n = Math.pow(3, k), m = new Uint8Array(n * n);
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+      var a = x, b = y, keep = 1;
+      while (a > 0 || b > 0) { if (a % 3 === 1 && b % 3 === 1) { keep = 0; break; } a = (a / 3) | 0; b = (b / 3) | 0; }
+      m[y * n + x] = keep;
+    }
+    return { n: n, m: m };
+  }
+
+  // Each side band is one tall lattice: carpets stacked vertically, joined along their edges.
+  function makeBand(c) {
+    var rows = c.n * S, cols = c.n, sp = new Int8Array(cols * rows), hole = new Uint8Array(cols * rows);
+    for (var t = 0; t < S; t++) for (var i = 0; i < c.n * c.n; i++) hole[t * c.n * c.n + i] = c.m[i] ? 0 : 1;
+    var off = document.createElement('canvas'); off.width = cols; off.height = rows;
+    var oc = off.getContext('2d');
+    return { cols: cols, rows: rows, s: sp, hole: hole, off: off, oc: oc, img: oc.createImageData(cols, rows) };
+  }
+  function randomise() {
+    bands.forEach(function (b) { for (var i = 0; i < b.s.length; i++) b.s[i] = b.hole[i] ? 0 : (Math.random() < 0.5 ? 1 : -1); });
+  }
 
   function setup() {
     var dpr = window.devicePixelRatio || 1;
-    w = canvas.clientWidth; h = canvas.clientHeight;
-    CELL = w < 640 ? 3 : 5;
+    w = window.innerWidth; h = window.innerHeight;
+    band = Math.max(0, Math.floor(anchor.getBoundingClientRect().left + 8));
+    canvas.style.setProperty('--band', band + 'px');
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    cols = Math.round(w / CELL); rows = Math.round(h / CELL);
-    n = cols * rows;
-    spin = new Int8Array(n); field = new Float32Array(n);
-    randomise();
-    off = document.createElement('canvas'); off.width = cols; off.height = rows;
-    offCtx = off.getContext('2d'); img = offCtx.createImageData(cols, rows);
+    if (band < 60) { built = false; ctx.clearRect(0, 0, w, h); return; }
+    var k = Math.max(3, Math.min(5, Math.floor(Math.log(band / 1.6) / Math.log(3))));   // cells of at least ~1.6 px
+    var c = carpet(k);
+    L = c.n; S = Math.ceil(h / band) + 1;
+    bands = [makeBand(c), makeBand(c)];
+    randomise(); built = true;
   }
-  function randomise() { for (var i = 0; i < n; i++) spin[i] = Math.random() < 0.5 ? 1 : -1; }
 
-  // A slow cycle of scenes: near-critical clusters, a quench into growing domains, a travelling
-  // field that writes stripes or rings, coarsening once the field switches off, then melting.
-  // Keyframes: [seconds, beta / beta_c, field amplitude].
-  var KEYS = [[0, 1.00, 0], [10, 1.01, 0], [13, 1.65, 0], [22, 1.6, 0], [25, 1.25, 1.1], [35, 1.3, 1.1],
-              [37, 1.5, 0], [46, 1.5, 0], [50, 0.62, 0], [55, 0.65, 0], [60, 1.00, 0]];
-  var CYCLE = 60, shape = null, shapeCycle = -1;
+  // A one-minute cycle of temperatures, with a short field pulse that lets one phase take over.
+  // Keyframes: [seconds, temperature, field]. The field sign alternates between cycles.
+  var KEYS = [[0, 0.9, 0], [13, 0.9, 0], [17, 1.45, 0], [29, 1.5, 0], [32, 1.15, 0.3], [37, 1.15, 0.3],
+              [39, 1.15, 0], [43, 2.4, 0], [47, 2.3, 0], [50, 0.9, 0], [60, 0.9, 0]];
+  var CYCLE = 60;
   function ease(a, b, u) { return a + (b - a) * (0.5 - 0.5 * Math.cos(Math.PI * u)); }
   function scene(sec) {
     var c = Math.floor(sec / CYCLE), t = sec - c * CYCLE, k = 0;
     while (k < KEYS.length - 2 && KEYS[k + 1][0] <= t) k++;
     var a = KEYS[k], b = KEYS[k + 1], u = (t - a[0]) / (b[0] - a[0]);
-    if (c !== shapeCycle) {                      // new geometry for the field every cycle
-      shapeCycle = c;
-      shape = c % 2 === 1 ? { rings: true } : { rings: false, angle: Math.random() * Math.PI };
-    }
-    return { beta: BETA_C * ease(a[1], b[1], u) * Math.exp(-heat), amp: ease(a[2], b[2], u), t: t };
-  }
-  function fieldAt(x, y, sc) {
-    var lambda = 26, phase = 2 * Math.PI * sc.t / 5;
-    var q = shape.rings
-      ? Math.sqrt((x - cols / 2) * (x - cols / 2) + (y - rows / 2) * (y - rows / 2))
-      : x * Math.cos(shape.angle) + y * Math.sin(shape.angle);
-    return sc.amp * Math.sin(2 * Math.PI * q / lambda - phase);
+    return { T: ease(a[1], b[1], u) * Math.exp(heat), h: (c % 2 ? -1 : 1) * ease(a[2], b[2], u) };
   }
 
-  function sweep(sc) {
-    var beta = sc.beta, wave = sc.amp > 0.02;
-    var r2 = 0, px = 0, py = 0, has = pointer !== null;
-    if (has) { px = pointer.x / CELL; py = pointer.y / CELL; r2 = Math.pow(Math.max(6, cols / 22), 2); }
-    if (wave) for (var yy = 0; yy < rows; yy++) for (var xx = 0; xx < cols; xx++) field[yy * cols + xx] = fieldAt(xx, yy, sc);
+  function sweep(b, sc, side) {
+    var beta = 1 / sc.T, cols = b.cols, rows = b.rows, sp = b.s, hole = b.hole;
+    for (var q = 0; q < 9; q++) pUp[q] = 1 / (1 + Math.exp(-2 * beta * (q - 4 + sc.h)));
+    var cell = band / L, has = false, px = 0, py = 0, r2 = 1;
+    if (pointer) {
+      var lx = side === 0 ? pointer.x : pointer.x - (w - band);
+      if (lx >= 0 && lx < band) { has = true; px = lx / cell; py = pointer.y / cell; r2 = Math.pow(L / 10, 2); }
+    }
     for (var parity = 0; parity < 2; parity++) {
       for (var y = 0; y < rows; y++) {
-        var up = ((y - 1 + rows) % rows) * cols, dn = ((y + 1) % rows) * cols, row = y * cols;
+        var row = y * cols;
         for (var x = (y + parity) & 1; x < cols; x += 2) {
-          var l = x === 0 ? cols - 1 : x - 1, r = x === cols - 1 ? 0 : x + 1;
-          var sum = spin[row + l] + spin[row + r] + spin[up + x] + spin[dn + x];
-          var hl = wave ? field[row + x] : 0;
-          if (has) { var dx = x - px, dy = y - py, d2 = dx * dx + dy * dy; if (d2 < 9 * r2) hl += 1.6 * Math.exp(-d2 / r2); }
-          var p = 1 / (1 + Math.exp(-2 * beta * (sum + hl)));
-          spin[row + x] = Math.random() < p ? 1 : -1;
+          var i = row + x;
+          if (hole[i]) continue;
+          var sum = (x > 0 ? sp[i - 1] : 0) + (x < cols - 1 ? sp[i + 1] : 0) + (y > 0 ? sp[i - cols] : 0) + (y < rows - 1 ? sp[i + cols] : 0);
+          var p = pUp[sum + 4];
+          if (has) {
+            var dx = x - px, dy = y - py, d2 = dx * dx + dy * dy;
+            if (d2 < 9 * r2) p = 1 / (1 + Math.exp(-2 * beta * (sum + sc.h + 1.5 * Math.exp(-d2 / r2))));
+          }
+          sp[i] = Math.random() < p ? 1 : -1;
         }
       }
     }
   }
 
   function render() {
-    var d = img.data, m = 0;
-    for (var y = 0; y < rows; y++) {
-      var up = ((y - 1 + rows) % rows) * cols, dn = ((y + 1) % rows) * cols, row = y * cols;
-      for (var x = 0; x < cols; x++) {
-        var i = row + x, s = spin[i]; m += s;
-        var l = x === 0 ? cols - 1 : x - 1, r = x === cols - 1 ? 0 : x + 1;
-        var agree = (spin[row + l] === s) + (spin[row + r] === s) + (spin[up + x] === s) + (spin[dn + x] === s);
-        var c = s > 0 ? UP : DOWN, k = i * 4;
-        if (s > 0 && agree === 0) c = WALL;          // isolated up-spins: thermal noise in red
-        d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2]; d[k + 3] = s > 0 ? (agree >= 3 ? 255 : 200) : 255;
-      }
-    }
-    offCtx.putImageData(img, 0, 0);
-    ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(off, 0, 0, w, h);
-    return m / n;
+    ctx.imageSmoothingEnabled = false;
+    var m = 0, cnt = 0;
+    bands.forEach(function (b, side) {
+      var d = b.img.data;
+      for (var i = 0, k = 0; i < b.s.length; i++, k += 4) {
+        var c = b.hole[i] ? HOLE : b.s[i] > 0 ? UP : DOWN;
+        d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2]; d[k + 3] = 255;
+        if (!b.hole[i]) { m += b.s[i]; cnt++; }
+      }
+      b.oc.putImageData(b.img, 0, 0);
+      ctx.drawImage(b.off, side === 0 ? 0 : w - band, 0, band, band * S);
+    });
+    return cnt ? m / cnt : 0;
   }
 
-  function report(beta, mag, amp) {
-    var ratio = beta / BETA_C;
-    var phase = ratio > 1.06 ? 'ordered' : ratio < 0.94 ? 'disordered' : 'near critical';
-    readout.innerHTML = 'β = ' + beta.toFixed(3) + ', β/β<sub>c</sub> = ' + ratio.toFixed(2) + ' (' + phase + '), magnetisation ' +
-      (mag >= 0 ? '+' : '−') + Math.abs(mag).toFixed(2) + (amp > 0.05 ? ', travelling field on' : '');
+  function report(sc, mag) {
+    readout.textContent = 'T = ' + sc.T.toFixed(2) + ', magnetisation ' + (mag >= 0 ? '+' : '−') + Math.abs(mag).toFixed(2) +
+      (Math.abs(sc.h) > 0.02 ? ', field pulse on' : '');
   }
 
   function tick(now) {
     raf = null;
-    if (!visible) return;
+    if (paused || document.hidden || !built || !wide.matches) return;
     var dt = Math.min(0.1, (now - last) / 1000); last = now;
-    heat *= Math.exp(-dt / 1.6);
+    heat *= Math.exp(-dt / 1.8);
     var sc = scene((now - t0) / 1000);
-    sweep(sc); sweep(sc);
+    sweep(bands[0], sc, 0); sweep(bands[1], sc, 1);
     var mag = render();
-    if (now - lastReadout > 250) { report(sc.beta, mag, sc.amp); lastReadout = now; }
+    if (now - lastReadout > 300) { report(sc, mag); lastReadout = now; }
     raf = requestAnimationFrame(tick);
   }
-  function start() { if (!raf && !reduce) { last = performance.now(); raf = requestAnimationFrame(tick); } }
-
+  function start() { if (!raf && !paused) { last = performance.now(); raf = requestAnimationFrame(tick); } }
   function still() {
-    // Reduced motion: one equilibrated snapshot slightly below the critical temperature.
-    var sc = { beta: BETA_C * 1.04, amp: 0, t: 0 };
-    for (var k = 0; k < 400; k++) sweep(sc);
-    report(sc.beta, render(), 0);
+    if (!built) return;
+    var sc = { T: 1.2, h: 0 };
+    for (var k = 0; k < 150; k++) { sweep(bands[0], sc, 0); sweep(bands[1], sc, 1); }
+    report(sc, render());
   }
 
   window.addEventListener('scroll', function () {
-    var y = window.scrollY; heat = Math.min(1.4, heat + Math.abs(y - lastScroll) / 900); lastScroll = y;
+    var y = window.scrollY; heat = Math.min(0.9, heat + Math.abs(y - lastScroll) / 2500); lastScroll = y;
   }, { passive: true });
-  canvas.addEventListener('pointermove', function (e) {
-    var b = canvas.getBoundingClientRect(); pointer = { x: e.clientX - b.left, y: e.clientY - b.top };
+  window.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse') pointer = { x: e.clientX, y: e.clientY }; });
+  document.documentElement.addEventListener('pointerleave', function () { pointer = null; });
+  document.getElementById('reset').addEventListener('click', function () { randomise(); if (paused) still(); });
+  pauseBtn.addEventListener('click', function () {
+    paused = !paused;
+    pauseBtn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+    pauseBtn.textContent = paused ? 'Resume animation' : 'Pause animation';
+    start();
   });
-  canvas.addEventListener('pointerleave', function () { pointer = null; });
-  document.getElementById('reset').addEventListener('click', function () { randomise(); if (reduce) still(); });
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (es) { visible = es[0].isIntersecting; if (visible) start(); }).observe(canvas);
-  }
-  document.addEventListener('visibilitychange', function () { visible = !document.hidden; if (visible) start(); });
+  document.addEventListener('visibilitychange', start);
   var resizeTimer;
   window.addEventListener('resize', function () {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () { setup(); if (reduce) still(); }, 200);
+    resizeTimer = setTimeout(function () {
+      if (Math.abs(window.innerWidth - w) < 2 && Math.abs(window.innerHeight - h) < 160) return;
+      setup(); if (paused) still(); else start();
+    }, 250);
   });
 
   setup();
-  if (reduce) still(); else start();
+  if (reduce) { pauseBtn.textContent = 'Resume animation'; pauseBtn.setAttribute('aria-pressed', 'true'); still(); }
+  else start();
 })();
 </script>
 </body>

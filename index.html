@@ -152,10 +152,11 @@
     <article class="project">
       <div>
         <h3>BONASUS: a research process for systematic strategies</h3>
-        <p>An ongoing team project and the successor to MOMENTUM. The product is a reproducible research process: a hypothesis passes the same pipeline before it counts, and negative results are archived as results.</p>
+        <p>An ongoing team project, built as the successor to an earlier one. The product is a reproducible research process: a hypothesis passes the same pipeline before it counts, and negative results are archived as results.</p>
         <ul>
-          <li><strong>Why it exists.</strong> MOMENTUM searched about 4,000 strategy configurations; the best of that many null signals has a t-statistic near 4. Of its 20 hypotheses on Warsaw stocks (2011–2026, about 400 names), 17 were tested and none passed the full gate. BONASUS replaced search with falsification: a cheap cross-sectional IC gate before any backtest.</li>
+          <li><strong>Why it exists.</strong> The previous project searched about 4,000 strategy configurations; the best of that many null signals has a t-statistic near 4. Of its 20 hypotheses on Warsaw stocks (2011–2026, about 400 names), 17 were tested and none passed the full gate. BONASUS replaced search with falsification: a cheap cross-sectional IC gate before any backtest.</li>
           <li><strong>Method stack:</strong> pre-registration with decision rules; Newey–West IC, Fama–MacBeth; Benjamini–Hochberg with an effective number of tests; Deflated Sharpe Ratio; regime detection calibrated on Warsaw Stock Exchange data, with volatility regimes from a stochastic-volatility model filtered by a Kalman filter (Kim–Shephard–Chib mixture) and trend regimes from KAMA and a jump model; liquidity-tiered cost wall; purged walk-forward with embargo; positive controls and minimum detectable effects; a log that counts every run.</li>
+          <li><strong>Regime detectors compared on WIG:</strong> SMA, EMA, KAMA, Donchian channel and a jump model, selected on data up to 2019 and checked once on a 2019–2026 holdout. KAMA caught 14 of 14 market turning points with a median lag of 17.5 sessions; the jump model caught 13 of 14 but switched only about 3 times a year, as rarely as the SMA200 benchmark.</li>
           <li><strong>Market as a parameter:</strong> calendar, currency, risk-free rate and costs form a profile, so the pipeline runs on Warsaw and US data.</li>
           <li><strong>Event study, AI news and US stocks:</strong> 50 events &times; 32 instruments. The statistical test around it is being rebuilt from scratch.</li>
         </ul>

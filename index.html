@@ -107,10 +107,10 @@
 
 <header class="wrap">
   <h1>Maciej Karawan</h1>
-  <p class="lede">Mathematician working on stochastic modelling: Monte Carlo methods, MCMC optimisation, and the pricing and hedging of derivatives. Below are selected projects, each with code and a write-up on <a href="https://github.com/MaciejKarawan">GitHub</a>. You can also find me on <a href="https://www.linkedin.com/in/maciej-karawan">LinkedIn</a>.</p>
+  <p class="lede">Passionate about theoretical mathematics, a probability enjoyer and a working statistician. Day to day I do stochastic modelling: drawing certainties out of uncertain things. Below are selected projects, each with code and a write-up on <a href="https://github.com/MaciejKarawan">GitHub</a>. You can also find me on <a href="https://www.linkedin.com/in/maciej-karawan">LinkedIn</a>.</p>
 
   <div class="sim-note">
-    <p>The side bands run a live Ising model on a Sierpiński carpet, a fractal graph of dimension log 8 / log 3 &asymp; 1.89, sampled with the heat-bath Gibbs sampler from my thesis. The temperature cycles, so domains form, coarsen, take over and melt. Scrolling heats the lattice, and the cursor acts as a local magnetic field.</p>
+    <p>The side bands run a live Ising model on a Sierpiński carpet, a fractal graph of dimension log 8 / log 3 &asymp; 1.89, sampled with a heat-bath Gibbs sampler. The temperature cycles, so domains form, coarsen, take over and melt. Scrolling heats the lattice, and the cursor acts as a local magnetic field.</p>
     <span class="readout" id="readout" aria-live="off"></span>
     <button class="redraw" id="pause" type="button" aria-pressed="false">Pause animation</button><button class="redraw" id="reset" type="button">Reset spins</button>
   </div>
@@ -121,11 +121,11 @@
   <section aria-labelledby="experience">
     <h2 id="experience">Experience and education</h2>
     <ul class="cv">
+      <li><span class="when">Since May 2024</span><div><strong>Slots Mathematician and Game Designer</strong>, Wazdan<p>Slot game mathematics: RTP and volatility modelling (variance, skewness, kurtosis) and paytable design.</p></div></li>
       <li><span class="when">Aug–Oct 2026</span><div><strong>Quant Researcher</strong>, Giulio Sp. z o.o.<p>Built a tool for falsifying quantitative hypotheses.</p></div></li>
-      <li><span class="when">Since May 2024</span><div><strong>Senior Game Designer &amp; Mathematician</strong>, Wazdan<p>Slot game mathematics: RTP and volatility modelling (variance, skewness, kurtosis) and paytable design.</p></div></li>
-      <li><span class="when">Since 2021</span><div><strong>Mathematics tutor</strong></div></li>
+      <li><span class="when">2026</span><div><strong>MSc in Mathematics</strong> (Financial and Actuarial Mathematics), University of Wrocław<p>GPA 4.5 / 5.0. Thesis: Perfect simulation via strong stationary duality for Möbius monotone Markov chains.</p></div></li>
       <li><span class="when">2024, 2 months</span><div><strong>Research Assistant</strong>, University of Sharjah, UAE</div></li>
-      <li><span class="when">2026</span><div><strong>MSc in Mathematics</strong> (Financial and Actuarial Mathematics), University of Wrocław<p>Thesis: Perfect simulation via strong stationary duality for Möbius monotone Markov chains.</p></div></li>
+      <li><span class="when">Since 2021</span><div><strong>Mathematics tutor</strong></div></li>
     </ul>
   </section>
 
@@ -135,35 +135,35 @@
     <article class="project">
       <div>
         <h3>Master's thesis: perfect simulation for Möbius monotone Markov chains</h3>
-        <p>An algorithm that draws <em>exact</em> samples from a Markov chain's stationary distribution, with no burn-in, by turning Diaconis–Fill strong stationary duality into something implementable. For chains whose time reversal is Möbius monotone, the dual is built as a Doob transform of a Siegmund dual, and the coupled process needs only the original kernel.</p>
+        <p>The main contribution is an implementable perfect simulation algorithm: it draws <em>exact</em> samples from a Markov chain's stationary distribution, with no burn-in, by turning Diaconis–Fill strong stationary duality into something that can actually be run, and it is benchmarked against coupling from the past (CFTP). For chains whose time reversal is Möbius monotone, the dual is built as a Doob transform of a Siegmund dual, and the coupled process needs only the original kernel.</p>
         <p>For the heat-bath Gibbs sampler of the Ising model on a cycle, I proved Möbius monotonicity, derived the Siegmund dual explicitly and bounded the running time by N·H<sub>N</sub> ≤ E[T*] ≤ e<sup>4β</sup>·N·H<sub>N</sub>. Monte Carlo experiments show that coupling from the past costs a constant ≈ 2.85 times more, close to the theoretical 2/ln 2.</p>
+        <p>Research on the method continues, and the work is planned for publication.</p>
         <p class="meta">Supervisor: dr hab. Paweł Lorek, prof. UWr. University of Wrocław, 2026. Python, exact recursions with dihedral-symmetry reduction.</p>
         <p class="links"><a href="https://github.com/MaciejKarawan/Perfect-Simulation-Monotone-Markov-Chains">Code</a><a href="https://github.com/MaciejKarawan/Perfect-Simulation-Monotone-Markov-Chains/blob/main/thesis/Karawan_2026_Perfect_simulation_SSD_Mobius_monotone.pdf">Thesis (PDF)</a></p>
       </div>
       <div class="aside">
         <img src="assets/thesis.png" alt="Ratio of CFTP work to SSD absorption time across chain sizes and temperatures, flat near 2.85" loading="lazy" width="720" height="445">
         <p class="cap">Cost of CFTP relative to the new algorithm, across N and β.</p>
+        <img src="assets/thesis_dual_diagram.png" alt="Transition diagram of the Siegmund dual on the three-spin cube: from the current state the chain can flip a spin up, swap neighbouring opposite spins or stay, and the remaining mass goes to a cemetery state" loading="lazy" width="1106" height="692" style="margin-top:1.2rem">
+        <p class="cap">Moves of the Siegmund dual for the Ising chain on a three-vertex cycle.</p>
       </div>
     </article>
 
     <article class="project">
       <div>
         <h3>BONASUS: a research process for systematic strategies</h3>
-        <p>An ongoing team project. The product is a reproducible research process rather than a single strategy: a hypothesis has to pass the same pipeline before it counts, and negative results are archived as results.</p>
+        <p>An ongoing team project and the successor to MOMENTUM. The product is a reproducible research process: a hypothesis passes the same pipeline before it counts, and negative results are archived as results.</p>
         <ul>
-          <li><strong>From search to falsification.</strong> The predecessor project searched thousands of strategy configurations. The best of about 4,000 null signals has a t-statistic near 4, so noise looks like a discovery. The project was reset around a cheap cross-sectional IC gate that comes before any portfolio backtest.</li>
-          <li><strong>20 hypotheses on the Warsaw Stock Exchange</strong>, 2011–2026, about 400 stocks: 17 tested, 3 still waiting for data. All are archived, rejected ones included. None has passed the full gate.</li>
-          <li><strong>Data forensics.</strong> 182 non-trading dates in the panel left the top-20 basket empty on a third of them. 7,935 negative adjusted closes in Yahoo data led to a frozen, audited snapshot, which 654 of 668 instruments passed.</li>
-          <li><strong>Method stack:</strong> pre-registration with a decision rule; Newey–West IC and Fama–MacBeth regressions; Benjamini–Hochberg with an effective number of tests; a cost wall with liquidity-tiered costs; purged walk-forward with embargo; positive controls that give each gate a minimum detectable effect; a research log that counts every run, failed ones included.</li>
-          <li><strong>Market as a parameter.</strong> Calendar, currency, risk-free rate and cost model form a market profile, so the same pipeline runs on Warsaw and US data.</li>
-          <li><strong>Event study: AI news and US stocks.</strong> A panel of 50 AI-related events &times; 32 US instruments (97,600 rows). In a pre-registered diagnostic, power and grid stocks drifted up about 1.75% before unscheduled events (33 event clusters), while scheduled events showed the opposite sign. Development-set exploration, with no significance claims.</li>
+          <li><strong>Why it exists.</strong> MOMENTUM searched about 4,000 strategy configurations; the best of that many null signals has a t-statistic near 4. Of its 20 hypotheses on Warsaw stocks (2011–2026, about 400 names), 17 were tested and none passed the full gate. BONASUS replaced search with falsification: a cheap cross-sectional IC gate before any backtest.</li>
+          <li><strong>Method stack:</strong> pre-registration with decision rules; Newey–West IC, Fama–MacBeth; Benjamini–Hochberg with an effective number of tests; Deflated Sharpe Ratio; Calmar ratio; regime detection with KAMA and a jump model, calibrated on Warsaw Stock Exchange data; liquidity-tiered cost wall; purged walk-forward with embargo; positive controls and minimum detectable effects; a log that counts every run.</li>
+          <li><strong>Market as a parameter:</strong> calendar, currency, risk-free rate and costs form a profile, so the pipeline runs on Warsaw and US data.</li>
+          <li><strong>Event study, AI news and US stocks:</strong> 50 events &times; 32 instruments. The statistical test around it is being rebuilt from scratch.</li>
         </ul>
-        <p>So far every run is post-hoc or technical; the count of formal tests is still zero. The cocoa and MSTR studies below were run alongside it.</p>
         <p class="meta">Python, pytest, ruff, GitHub CI. Code not public yet.</p>
       </div>
       <div class="aside">
         <div class="figure-num">17</div>
-        <p class="cap">hypotheses tested on Warsaw stocks and archived, rejected ones included</p>
+        <p class="cap">hypotheses tested on Warsaw stocks in the predecessor project, all archived, rejected ones included</p>
       </div>
     </article>
 
